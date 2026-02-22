@@ -9,9 +9,7 @@ Reference: https://creativecommons.org/licenses/by/4.0/
 
 # aiprom-llm
 
-This repository contains dataset(s) and utilities for supervised fine-tuning (SFT) an LLM (e.g., Qwen family) to generate strict **AIPROM FieldTemplate JSON** objects for:
-
-- `POST /api/forms/templates`
+This repository contains dataset(s) and utilities for supervised fine-tuning (SFT) an LLM (e.g., Qwen family) to generate strict **FHIR R4 QuestionnaireItem JSON** objects.
 
 ## Documents
 
@@ -20,22 +18,22 @@ This repository contains dataset(s) and utilities for supervised fine-tuning (SF
 ## What is in this repo
 
 - SFT datasets under `data/` (JSONL with ChatML stored in a `text` string)
-- A deterministic dataset normalizer: `scripts/normalize_dataset.py`
+- A deterministic FHIR dataset normalizer/validator: `scripts/normalize_dataset.py`
 - Training/config helpers under `configs/` (currently minimal)
 
 ## Quick start
 
-Normalize (and validate) the expanded dataset in-place:
+Normalize (and validate) the FHIR dataset in-place:
 
 ```bash
-python3 scripts/normalize_dataset.py data/aiprom-train-dataset-150.jsonl
+python3 scripts/normalize_dataset.py data/aiprom-dataset-fhir-4-150.jsonl
 ```
 
 This will:
 
-- Ensure `is_active: true` exists on every assistant FieldTemplate JSON
-- Upgrade low-quality duplicates by copying canonical fields already present in the dataset
-- Exit non-zero if option-based templates are still missing `options`
+- Parse each JSONL ChatML row and validate the assistant payload as QuestionnaireItem-like JSON
+- Apply safe FHIR normalization (`type`, `required`, `code`) and reuse canonical `answerOption`/`code` on duplicates by `(linkId, type)`
+- Exit non-zero if blocking issues remain (e.g., invalid `type`, missing `linkId`, invalid `code`, missing `answerOption` for `choice/open-choice`)
 
 ## Legal & Copyright Notice
 
@@ -78,43 +76,8 @@ This section is provided for engineering guidance and risk awareness only; it is
 
 If you want a lower-risk subset for commercial use, consider excluding instruments with registration/licensing restrictions and keeping only clearly permissive instruments plus custom/original fields.
 
-Example subsets (based on the counts documented in [docs/datasets.md](docs/datasets.md)):
+For the current FHIR workflow, use `data/aiprom-dataset-fhir-4-150.jsonl` as the source dataset and create filtered derivatives with your own inclusion/exclusion rules per instrument licensing.
 
-Generate these subsets with:
+Current full dataset size: **150 examples** (see [docs/datasets.md](docs/datasets.md)).
 
-```bash
-python3 scripts/filter_dataset.py --preset commercial-focused \
-  data/aiprom-train-dataset-150.jsonl \
-  data/aiprom-train-dataset-commercial-focused.jsonl
-```
-
-- Commercial-focused (avoid restricted instruments):
-	- PHQ-9: 13
-	- GAD-7: 10
-	- PROMIS: 12
-	- Custom clinical + demographics + vitals: 24
-	- Total: 59
-- Academic-only (still verify terms):
-	- PHQ-9: 13
-	- GAD-7: 10
-	- EORTC: 35
-	- EQ-5D: 9
-	- PROMIS: 12
-	- Custom clinical + demographics + vitals: 24
-	- Total: 103
-
-Note: These totals are for filtered subsets, not the full dataset.
-
-The expanded dataset totals 150 examples (see [docs/datasets.md](docs/datasets.md)), composed of:
-
-- EORTC QLQ-C30: 35
-- PHQ-9: 13
-- HADS: 18
-- GAD-7: 10
-- FACT-G: 20
-- PROMIS-29: 12
-- EQ-5D-5L: 9
-- SF-12: 9
-- Baseline demographics: 10
-- Vital signs: 5
-- Custom clinical: 9
+Tip: keep filtered outputs as separate files (e.g., `data/aiprom-dataset-fhir-4-150-commercial.jsonl`) and document the filtering criteria used.
