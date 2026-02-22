@@ -77,6 +77,43 @@ python -m mlx_lm.generate \
 
 Tip: keep prompts in ChatML format to match training conditions.
 
+### Use the specialized model in LM Studio (GGUF)
+
+For this project (`Qwen2.5` family), the direct MLX flag `--export-gguf` may fail with:
+
+`Model type qwen2 not supported for GGUF conversion.`
+
+Use this workflow instead:
+
+1) Fuse base model + trained LoRA adapter (MLX):
+
+```bash
+python -m mlx_lm fuse \
+	--model mlx-community/Qwen2.5-7B-Instruct-4bit \
+	--adapter-path lab/artifacts/checkpoints \
+	--save-path lab/artifacts/fused
+```
+
+2) Convert fused HF model to GGUF with `llama.cpp`:
+
+```bash
+python convert_hf_to_gguf.py \
+	lab/artifacts/fused \
+	--outfile lab/artifacts/fused/model-fused-f16.gguf \
+	--outtype f16
+```
+
+3) (Optional, recommended) Quantize for lighter inference:
+
+```bash
+./llama-quantize \
+	lab/artifacts/fused/model-fused-f16.gguf \
+	lab/artifacts/fused/model-fused-q4_k_m.gguf \
+	q4_k_m
+```
+
+4) Import the generated `.gguf` file into LM Studio (`My Models` -> `Import`).
+
 ## Legal & Copyright Notice
 
 ### Repository license
@@ -87,6 +124,21 @@ Unless stated otherwise in a specific file header, the original content in this 
 - SPDX: `CC-BY-4.0`
 
 Copyright (c) 2026 Pablo Pimàs.
+
+### Base model copyright and license
+
+This project fine-tunes the third-party base model `mlx-community/Qwen2.5-7B-Instruct-4bit`.
+
+Hugging Face repository (base model used in this project):
+
+- https://huggingface.co/mlx-community/Qwen2.5-7B-Instruct-4bit
+
+- Declared license for `mlx-community/Qwen2.5-7B-Instruct-4bit`: **Apache-2.0**.
+- The original Qwen model family is provided by its respective authors/rights holders (Qwen/Alibaba Cloud) and is governed by its own model license and terms.
+- The `mlx-community` repository is a converted distribution of model weights for MLX usage and remains subject to the upstream model licensing constraints.
+- LoRA adapters generated in this repository are derivative artifacts that must be used and distributed in compliance with the base model license.
+
+Before deployment, redistribution, or commercial use, review the model card and license terms for both the upstream Qwen model and the specific `mlx-community` distribution used.
 
 ### Third-party questionnaire content
 
