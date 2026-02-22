@@ -1,0 +1,5 @@
+model: mlx-community/Qwen2.5-Coder-7B-Instruct-4bit
+lora_r: 32
+lora_alpha: 64
+train_iters: 1000
+batch_size: 1

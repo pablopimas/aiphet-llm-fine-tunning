@@ -1,0 +1,15 @@
+# FOR APPLE SILICON
+
+# MLX core
+mlx-lm>=0.30.0
+
+# Data & utils
+datasets>=2.18.0
+pyyaml>=6.0.1
+
+# Logging
+wandb
+
+# Development
+black
+ruff
