@@ -9,7 +9,7 @@ Reference: https://creativecommons.org/licenses/by/4.0/
 
 # aiprom-llm
 
-This repository contains dataset(s) and utilities for supervised fine-tuning (SFT) an LLM (e.g., Qwen family) to generate strict **FHIR R4 QuestionnaireItem JSON** objects.
+This repository contains dataset(s) and utilities for supervised fine-tuning (SFT) an LLM (currently **mlx-community/Qwen2.5-7B-Instruct-4bit**) to generate strict **FHIR R4 QuestionnaireItem JSON** objects.
 
 ## Documents
 
@@ -34,6 +34,48 @@ This will:
 - Parse each JSONL ChatML row and validate the assistant payload as QuestionnaireItem-like JSON
 - Apply safe FHIR normalization (`type`, `required`, `code`) and reuse canonical `answerOption`/`code` on duplicates by `(linkId, type)`
 - Exit non-zero if blocking issues remain (e.g., invalid `type`, missing `linkId`, invalid `code`, missing `answerOption` for `choice/open-choice`)
+
+## Training notebook (end-to-end)
+
+Use the notebook [lab/qwen-7b.ipynb](lab/qwen-7b.ipynb) for the full reproducible workflow:
+
+- environment and reproducibility snapshot,
+- dataset parsing and FHIR structural validation,
+- deterministic train/validation split,
+- train/val artifact materialization,
+- MLX-LM LoRA training command execution,
+- quantitative and qualitative evaluation sections.
+
+### What artifacts does it generate?
+
+The notebook writes reproducibility and training artifacts under [lab/artifacts](lab/artifacts):
+
+- [lab/artifacts/split_manifest.json](lab/artifacts/split_manifest.json)
+- [lab/artifacts/train.jsonl](lab/artifacts/train.jsonl)
+- [lab/artifacts/val.jsonl](lab/artifacts/val.jsonl)
+- [lab/artifacts/valid.jsonl](lab/artifacts/valid.jsonl)
+- [lab/artifacts/dataset_manifest.json](lab/artifacts/dataset_manifest.json)
+- [lab/artifacts/training_config.json](lab/artifacts/training_config.json)
+- [lab/artifacts/training_run_log.json](lab/artifacts/training_run_log.json)
+- checkpoint/adapters in [lab/artifacts/checkpoints](lab/artifacts/checkpoints)
+
+### Does it produce a specialized model?
+
+Yes. Running the training cell produces a **specialized LoRA adapter** over the base Qwen model for FHIR QuestionnaireItem-style generation. It does not replace the base model weights; it creates adapter weights that are loaded on top of the base model.
+
+### Quick inference with the trained adapter
+
+After training, you can run an inference test with MLX-LM using the adapter directory:
+
+```bash
+python -m mlx_lm.generate \
+	--model mlx-community/Qwen2.5-7B-Instruct-4bit \
+	--adapter-path lab/artifacts/checkpoints \
+	--prompt "<|im_start|>system\nYou are a FHIR R4 expert.\n<|im_end|><|im_start|>user\nGenerate a QuestionnaireItem for PHQ-9 depressed mood\n<|im_end|><|im_start|>assistant\n" \
+	--max-tokens 400
+```
+
+Tip: keep prompts in ChatML format to match training conditions.
 
 ## Legal & Copyright Notice
 

@@ -1,0 +1,10 @@
+{
+  "dataset_source": "/Users/CAE9/aiprom-llm/data/aiprom-dataset-fhir-4-150.jsonl",
+  "train_path": "/Users/CAE9/aiprom-llm/lab/artifacts/train.jsonl",
+  "val_path": "/Users/CAE9/aiprom-llm/lab/artifacts/val.jsonl",
+  "valid_path": "/Users/CAE9/aiprom-llm/lab/artifacts/valid.jsonl",
+  "n_train": 120,
+  "n_val": 30,
+  "split_seed": 173,
+  "global_seed": 173
+}

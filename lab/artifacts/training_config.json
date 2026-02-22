@@ -1,0 +1,49 @@
+{
+  "experiment_name": "qwen_public_fhir_lora_v1",
+  "created_utc": "2026-02-22T15:26:59.155295+00:00",
+  "model": {
+    "name": "mlx-community/Qwen2.5-7B-Instruct-4bit",
+    "task": "chatml_to_fhir_questionnaireitem_json"
+  },
+  "data": {
+    "dataset_path": "/Users/CAE9/aiprom-llm/data/aiprom-dataset-fhir-4-150.jsonl",
+    "n_train": 120,
+    "n_val": 30,
+    "split_manifest_path": "/Users/CAE9/aiprom-llm/lab/artifacts/split_manifest.json"
+  },
+  "reproducibility": {
+    "global_seed": 173,
+    "split_seed": 173,
+    "python_version": "3.14.3",
+    "platform": "macOS-26.3-arm64-arm-64bit-Mach-O",
+    "git_commit": "381e7db009ce753328040debfdf9a07c834f4685"
+  },
+  "training": {
+    "strategy": "lora_or_qlora",
+    "max_seq_len": 2048,
+    "batch_size": 2,
+    "grad_accum_steps": 8,
+    "learning_rate": 0.0002,
+    "weight_decay": 0.0,
+    "warmup_steps": 20,
+    "train_steps": 400,
+    "eval_interval": 25,
+    "save_interval": 100
+  },
+  "lora": {
+    "rank": 16,
+    "alpha": 32,
+    "dropout": 0.05,
+    "target_modules": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj"
+    ]
+  },
+  "outputs": {
+    "artifact_dir": "/Users/CAE9/aiprom-llm/lab/artifacts",
+    "checkpoint_dir": "/Users/CAE9/aiprom-llm/lab/artifacts/checkpoints",
+    "log_json_path": "/Users/CAE9/aiprom-llm/lab/artifacts/training_config.json"
+  }
+}
