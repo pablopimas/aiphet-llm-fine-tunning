@@ -1,0 +1,42 @@
+{
+  "timestamp_utc": "2026-02-24T20:54:39.487115+00:00",
+  "model": "org/model-instruct",
+  "adapter_path": null,
+  "prompt": "<|im_start|>system\nYou are a FHIR R4 expert. Return ONLY raw JSON (no markdown, no code fences).\nGenerate VALID FHIR R4 Questionnaire JSON only.\nConstraints: do NOT include `initial`; for choice items use `answerOption` with `valueCoding.display`; do NOT nest sub-items under choice; keep it concise.\n<|im_end|><|im_start|>user\nGenerate a complete FHIR Questionnaire for a weekly recovery check-in form. Include resourceType='Questionnaire', id='weekly-recovery-checkin', status='active', title, and an item array with exactly 6 questions. Use mixed item types (choice, string, text, integer, boolean, date) and valid linkId values. For choice items include 4 answerOption values with valueCoding.display. Return only JSON.\n<|im_end|><|im_start|>assistant\n",
+  "command": [
+    "python",
+    "-m",
+    "mlx_lm",
+    "generate",
+    "--model",
+    "org/model-instruct",
+    "--ignore-chat-template",
+    "--prompt",
+    "<|im_start|>system\nYou are a FHIR R4 expert. Return ONLY raw JSON (no markdown, no code fences).\nGenerate VALID FHIR R4 Questionnaire JSON only.\nConstraints: do NOT include `initial`; for choice items use `answerOption` with `valueCoding.display`; do NOT nest sub-items under choice; keep it concise.\n<|im_end|><|im_start|>user\nGenerate a complete FHIR Questionnaire for a weekly recovery check-in form. Include resourceType='Questionnaire', id='weekly-recovery-checkin', status='active', title, and an item array with exactly 6 questions. Use mixed item types (choice, string, text, integer, boolean, date) and valid linkId values. For choice items include 4 answerOption values with valueCoding.display. Return only JSON.\n<|im_end|><|im_start|>assistant\n",
+    "--max-tokens",
+    "900",
+    "--seed",
+    "173",
+    "--temp",
+    "0.0",
+    "--top-p",
+    "1.0",
+    "--verbose",
+    "F",
+    "--extra-eos-token",
+    "<|im_end|>"
+  ],
+  "generation": {
+    "max_tokens": 900,
+    "temperature": 0.0,
+    "top_p": 1.0,
+    "seed": 173
+  },
+  "result": {
+    "return_code": 1,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \u001b[35m\"/Users/CAE9/aiprom-llm/.venv/lib/python3.14/site-packages/huggingface_hub/utils/_http.py\"\u001b[0m, line \u001b[35m657\u001b[0m, in \u001b[35mhf_raise_for_status\u001b[0m\n    \u001b[31mresponse.raise_for_status\u001b[0m\u001b[1;31m()\u001b[0m\n    \u001b[31m~~~~~~~~~~~~~~~~~~~~~~~~~\u001b[0m\u001b[1;31m^^\u001b[0m\n  File \u001b[35m\"/Users/CAE9/aiprom-llm/.venv/lib/python3.14/site-packages/httpx/_models.py\"\u001b[0m, line \u001b[35m829\u001b[0m, in \u001b[35mraise_for_status\u001b[0m\n    raise HTTPStatusError(message, request=request, response=self)\n\u001b[1;35mhttpx.HTTPStatusError\u001b[0m: \u001b[35mClient error '401 Unauthorized' for url 'https://huggingface.co/api/models/org/model-instruct/revision/main'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401\u001b[0m\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \u001b[35m\"<frozen runpy>\"\u001b[0m, line \u001b[35m198\u001b[0m, in \u001b[35m_run_module_as_main\u001b[0m\n  File \u001b[35m\"<frozen runpy>\"\u001b[0m, line \u001b[35m88\u001b[0m, in \u001b[35m_run_code\u001b[0m\n  File \u001b[35m\"/Users/CAE9/aiprom-llm/.venv/lib/python3.14/site-packages/mlx_lm/__main__.py\"\u001b[0m, line \u001b[35m6\u001b[0m, in \u001b[35m<module>\u001b[0m\n    \u001b[31mcli.main\u001b[0m\u001b[1;31m()\u001b[0m\n    \u001b[31m~~~~~~~~\u001b[0m\u001b[1;31m^^\u001b[0m\n  File \u001b[35m\"/Users/CAE9/aiprom-llm/.venv/lib/python3.14/site-packages/mlx_lm/cli.py\"\u001b[0m, line \u001b[35m39\u001b[0m, in \u001b[35mmain\u001b[0m\n    \u001b[31msubmodule.main\u001b[0m\u001b[1;31m()\u001b[0m\n    \u001b[31m~~~~~~~~~~~~~~\u001b[0m\u001b[1;31m^^\u001b[0m\n  File \u001b[35m\"/Users/CAE9/aiprom-llm/.venv/lib/python3.14/site-packages/mlx_lm/generate.py\"\u001b[0m, line \u001b[35m1390\u001b[0m, in \u001b[35mmain\u001b[0m\n    model, tokenizer = \u001b[31mload\u001b[0m\u001b[1;31m(\u001b[0m\n                       \u001b[31m~~~~\u001b[0m\u001b[1;31m^\u001b[0m\n        \u001b[1;31mmodel_path,\u001b[0m\n        \u001b[1;31m^^^^^^^^^^^\u001b[0m\n    ...<2 lines>...\n        \u001b[1;31mmodel_config={\"quantize_activations\": args.quantize_activations},\u001b[0m\n        \u001b[1;31m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\u001b[0m\n    \u001b[1;31m)\u001b[0m\n    \u001b[1;31m^\u001b[0m\n  File \u001b[35m\"/Users/CAE9/aiprom-llm/.venv/lib/python3.14/site-packages/mlx_lm/utils.py\"\u001b[0m, line \u001b[35m476\u001b[0m, in \u001b[35mload\u001b[0m\n    model_path = _download(path_or_hf_repo, revision=revision)\n  File \u001b[35m\"/Users/CAE9/aiprom-llm/.venv/lib/python3.14/site-packages/mlx_lm/utils.py\"\u001b[0m, line \u001b[35m236\u001b[0m, in \u001b[35m_download\u001b[0m\n    \u001b[31msnapshot_download\u001b[0m\u001b[1;31m(\u001b[0m\n    \u001b[31m~~~~~~~~~~~~~~~~~\u001b[0m\u001b[1;31m^\u001b[0m\n        \u001b[1;31mpath_or_hf_repo,\u001b[0m\n        \u001b[1;31m^^^^^^^^^^^^^^^^\u001b[0m\n        \u001b[1;31mrevision=revision,\u001b[0m\n        \u001b[1;31m^^^^^^^^^^^^^^^^^^\u001b[0m\n        \u001b[1;31mallow_patterns=allow_patterns,\u001b[0m\n        \u001b[1;31m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\u001b[0m\n    \u001b[1;31m)\u001b[0m\n    \u001b[1;31m^\u001b[0m\n  File \u001b[35m\"/Users/CAE9/aiprom-llm/.venv/lib/python3.14/site-packages/huggingface_hub/utils/_validators.py\"\u001b[0m, line \u001b[35m89\u001b[0m, in \u001b[35m_inner_fn\u001b[0m\n    return fn(*args, **kwargs)\n  File \u001b[35m\"/Users/CAE9/aiprom-llm/.venv/lib/python3.14/site-packages/huggingface_hub/_snapshot_download.py\"\u001b[0m, line \u001b[35m321\u001b[0m, in \u001b[35msnapshot_download\u001b[0m\n    raise api_call_error\n  File \u001b[35m\"/Users/CAE9/aiprom-llm/.venv/lib/python3.14/site-packages/huggingface_hub/_snapshot_download.py\"\u001b[0m, line \u001b[35m240\u001b[0m, in \u001b[35msnapshot_download\u001b[0m\n    repo_info = api.repo_info(repo_id=repo_id, repo_type=repo_type, revision=revision)\n  File \u001b[35m\"/Users/CAE9/aiprom-llm/.venv/lib/python3.14/site-packages/huggingface_hub/utils/_validators.py\"\u001b[0m, line \u001b[35m89\u001b[0m, in \u001b[35m_inner_fn\u001b[0m\n    return fn(*args, **kwargs)\n  File \u001b[35m\"/Users/CAE9/aiprom-llm/.venv/lib/python3.14/site-packages/huggingface_hub/hf_api.py\"\u001b[0m, line \u001b[35m2997\u001b[0m, in \u001b[35mrepo_info\u001b[0m\n    return method(\n        repo_id,\n    ...<4 lines>...\n        files_metadata=files_metadata,\n    )\n  File \u001b[35m\"/Users/CAE9/aiprom-llm/.venv/lib/python3.14/site-packages/huggingface_hub/utils/_validators.py\"\u001b[0m, line \u001b[35m89\u001b[0m, in \u001b[35m_inner_fn\u001b[0m\n    return fn(*args, **kwargs)\n  File \u001b[35m\"/Users/CAE9/aiprom-llm/.venv/lib/python3.14/site-packages/huggingface_hub/hf_api.py\"\u001b[0m, line \u001b[35m2791\u001b[0m, in \u001b[35mmodel_info\u001b[0m\n    \u001b[31mhf_raise_for_status\u001b[0m\u001b[1;31m(r)\u001b[0m\n    \u001b[31m~~~~~~~~~~~~~~~~~~~\u001b[0m\u001b[1;31m^^^\u001b[0m\n  File \u001b[35m\"/Users/CAE9/aiprom-llm/.venv/lib/python3.14/site-packages/huggingface_hub/utils/_http.py\"\u001b[0m, line \u001b[35m710\u001b[0m, in \u001b[35mhf_raise_for_status\u001b[0m\n    raise _format(RepositoryNotFoundError, message, response) from e\n\u001b[1;35mhuggingface_hub.errors.RepositoryNotFoundError\u001b[0m: \u001b[35m401 Client Error. (Request ID: Root=1-699e100e-468c66755dfa6c5668817a32;e8421bbf-ac68-4230-be86-671a23e6342a)\n\nRepository Not Found for url: https://huggingface.co/api/models/org/model-instruct/revision/main.\nPlease make sure you specified the correct `repo_id` and `repo_type`.\nIf you are trying to access a private or gated repo, make sure you are authenticated. For more details, see https://huggingface.co/docs/huggingface_hub/authentication\nInvalid username or password.\u001b[0m\n",
+    "generated_json": null
+  },
+  "notes": "Baseline inference reference with base model (no adapter)."
+}

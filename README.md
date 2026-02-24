@@ -46,18 +46,32 @@ Use the notebook [lab/qwen-7b.ipynb](lab/qwen-7b.ipynb) for the full reproducibl
 - MLX-LM LoRA training command execution,
 - quantitative and qualitative evaluation sections.
 
+### Model selection (single source of truth)
+
+The notebook now reads model selection from the first configuration cell and supports per-model artifact isolation.
+
+- `AIPROM_MODEL_BACKEND` (currently supported by this notebook: `mlx_lm`)
+- `AIPROM_MODEL_NAME` (example: `mlx-community/Qwen2.5-7B-Instruct-4bit`)
+- `AIPROM_MODEL_ALIAS` (optional override for artifact folder naming)
+
+If `AIPROM_MODEL_ALIAS` is not provided, it is derived from `AIPROM_MODEL_NAME`.
+
 ### What artifacts does it generate?
 
-The notebook writes reproducibility and training artifacts under [lab/artifacts](lab/artifacts):
+The notebook writes reproducibility and training artifacts under:
 
-- [lab/artifacts/split_manifest.json](lab/artifacts/split_manifest.json)
-- [lab/artifacts/train.jsonl](lab/artifacts/train.jsonl)
-- [lab/artifacts/val.jsonl](lab/artifacts/val.jsonl)
-- [lab/artifacts/valid.jsonl](lab/artifacts/valid.jsonl)
-- [lab/artifacts/dataset_manifest.json](lab/artifacts/dataset_manifest.json)
-- [lab/artifacts/training_config.json](lab/artifacts/training_config.json)
-- [lab/artifacts/training_run_log.json](lab/artifacts/training_run_log.json)
-- checkpoint/adapters in [lab/artifacts/checkpoints](lab/artifacts/checkpoints)
+- `lab/artifacts/<MODEL_ALIAS>/`
+
+Typical files include:
+
+- `lab/artifacts/<MODEL_ALIAS>/split_manifest.json`
+- `lab/artifacts/<MODEL_ALIAS>/train.jsonl`
+- `lab/artifacts/<MODEL_ALIAS>/val.jsonl`
+- `lab/artifacts/<MODEL_ALIAS>/valid.jsonl`
+- `lab/artifacts/<MODEL_ALIAS>/dataset_manifest.json`
+- `lab/artifacts/<MODEL_ALIAS>/training_config_stable.json`
+- `lab/artifacts/<MODEL_ALIAS>/training_run_log.json`
+- checkpoints/adapters in `lab/artifacts/<MODEL_ALIAS>/checkpoints_stable`
 
 ### Does it produce a specialized model?
 
@@ -70,7 +84,7 @@ After training, you can run an inference test with MLX-LM using the adapter dire
 ```bash
 python -m mlx_lm.generate \
 	--model mlx-community/Qwen2.5-7B-Instruct-4bit \
-	--adapter-path lab/artifacts/checkpoints \
+	--adapter-path lab/artifacts/<MODEL_ALIAS>/checkpoints_stable \
 	--prompt "<|im_start|>system\nYou are a FHIR R4 expert.\n<|im_end|><|im_start|>user\nGenerate a QuestionnaireItem for PHQ-9 depressed mood\n<|im_end|><|im_start|>assistant\n" \
 	--max-tokens 400
 ```
@@ -90,16 +104,16 @@ Use this workflow instead:
 ```bash
 python -m mlx_lm fuse \
 	--model mlx-community/Qwen2.5-7B-Instruct-4bit \
-	--adapter-path lab/artifacts/checkpoints \
-	--save-path lab/artifacts/fused
+	--adapter-path lab/artifacts/<MODEL_ALIAS>/checkpoints_stable \
+	--save-path lab/artifacts/<MODEL_ALIAS>/fused
 ```
 
 2) Convert fused HF model to GGUF with `llama.cpp`:
 
 ```bash
 python convert_hf_to_gguf.py \
-	lab/artifacts/fused \
-	--outfile lab/artifacts/fused/model-fused-f16.gguf \
+	lab/artifacts/<MODEL_ALIAS>/fused \
+	--outfile lab/artifacts/<MODEL_ALIAS>/fused/model-fused-f16.gguf \
 	--outtype f16
 ```
 
@@ -107,8 +121,8 @@ python convert_hf_to_gguf.py \
 
 ```bash
 ./llama-quantize \
-	lab/artifacts/fused/model-fused-f16.gguf \
-	lab/artifacts/fused/model-fused-q4_k_m.gguf \
+	lab/artifacts/<MODEL_ALIAS>/fused/model-fused-f16.gguf \
+	lab/artifacts/<MODEL_ALIAS>/fused/model-fused-q4_k_m.gguf \
 	q4_k_m
 ```
 
