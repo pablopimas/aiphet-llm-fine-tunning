@@ -338,8 +338,8 @@ def main() -> int:
     parser.add_argument(
         "path",
         nargs="?",
-        default="data/aiprom-dataset-fhir-4-150.jsonl",
-        help="Path to JSONL dataset (default: data/aiprom-dataset-fhir-4-150.jsonl)",
+        default="data/aiprom-items-dataset-fhir-4-150.jsonl",
+        help="Path to JSONL dataset (default: data/aiprom-items-dataset-fhir-4-150.jsonl)",
     )
     args = parser.parse_args()
 

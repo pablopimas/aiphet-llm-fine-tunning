@@ -1,7 +1,7 @@
 <!--
 Author: Pablo Pimàs
 Email: pablo@pimas.cat
-Date: 2026-02-22
+Date: 2026-02-23
 License: Creative Commons Attribution 4.0 International (CC BY 4.0)
 SPDX-License-Identifier: CC-BY-4.0
 Reference: https://creativecommons.org/licenses/by/4.0/
@@ -10,22 +10,108 @@ Reference: https://creativecommons.org/licenses/by/4.0/
 # Datasets
 
 - **Dataset Purpose**: Fair Use for research/educational purposes
-- **Questionnaire Content**: See Legal & Copyright Notice section
+- **Questionnaire / Item Content**: See Legal & Copyright Notice section
 
-This repository contains Supervised Fine-Tuning (SFT) datasets for training an LLM (e.g., Qwen family) to generate **FHIR R4 QuestionnaireItem JSON** objects.
+This repository contains Supervised Fine-Tuning (SFT) datasets for training an LLM (e.g., Qwen family) to generate **FHIR R4 Questionnaire JSON** objects (complete questionnaires) and **FHIR R4 QuestionnaireItem JSON** objects (questionnaire items).
 
-The training examples are stored as **JSONL** (one JSON object per line). Each example uses **ChatML-in-a-string** (a single `text` field containing system/user/assistant turns).
+Training examples are stored as **JSONL** (one JSON object per line). This repo currently contains two dataset formats:
+
+- **Prompt/Completion JSONL**: a `prompt` string + a `completion` string containing a JSON-encoded FHIR resource.
+- **ChatML-in-a-string JSONL**: a single `text` field that contains a ChatML transcript (system/user/assistant), where the assistant emits JSON.
 
 ## Files
 
 Datasets live under `data/`:
 
-- `data/aiprom-dataset-fhir-4-150.jsonl`: FHIR-focused dataset (current). 150 examples (1 JSON object per line).
+- `data/synthetic-aiprom-1500-firh4.jsonl`: **Synthetic AIPROM Questionnaires** dataset (current for Questionnaire training). 1500 examples.
+- `data/aiprom-items-dataset-fhir-4-150.jsonl`: **AIPROM Items** dataset (QuestionnaireItem-like fragments). 150 examples.
+
+## Primary dataset: Synthetic AIPROM Questionnaires (FHIR R4)
+
+File: `data/synthetic-aiprom-1500-firh4.jsonl`
+
+Current snapshot (2026-02-23):
+
+- Total examples: **1500**
+- Format: JSONL, one object per line, with fields:
+	- `prompt`: string
+	- `completion`: string (a JSON-encoded FHIR resource)
+- Target output: **FHIR R4 `Questionnaire`** resources (complete questionnaires)
+- Parsing status: 1500/1500 rows valid JSONL and 1500/1500 completion blocks valid JSON
+
+### Record format (JSONL)
+
+Each line is a JSON object with at least:
+
+```json
+{
+	"prompt": "Generate complete FHIR R4 Questionnaire for PHQ-9 Depression Assessment",
+	"completion": "{\"resourceType\":\"Questionnaire\",...}"
+}
+```
+
+Notes:
+
+- `completion` is a **string** that must be parsed as JSON to obtain the FHIR object.
+- In this dataset, the completion resource type is always `Questionnaire`.
+
+### Target output: FHIR R4 Questionnaire JSON
+
+The completion JSON is a FHIR `Questionnaire` object. Common fields observed (present on 1500/1500 rows in the current snapshot):
+
+- `resourceType`: "Questionnaire"
+- `id`: string
+- `title`: string
+- `status`: string (e.g., "active")
+- `subjectType`: array (e.g., ["Patient"])
+- `date`: string (date)
+- `code`: array of codings
+- `item`: array of `Questionnaire.item`
+
+### Item-level characteristics (current snapshot)
+
+- Items per questionnaire:
+	- min: **5**
+	- max: **9**
+	- average: **5.8**
+	- distribution: 5 items (900), 6 items (300), 7 items (150), 9 items (150)
+- Item `type` distribution across all `Questionnaire.item` entries:
+	- `integer`: **3450**
+	- `choice`: **3300**
+	- `boolean`: **1350**
+	- `decimal`: **450**
+	- `string`: **150**
+
+### Validation rules (practical contract)
+
+For this dataset, a row is considered valid when:
+
+- Line is a JSON object with non-empty string `prompt`.
+- `completion` is a non-empty string and parses to a JSON object.
+- `completion.resourceType == "Questionnaire"`.
+- `completion.item` is a non-empty array.
+- For each element in `completion.item`:
+	- `linkId`: non-empty string
+	- `type`: valid FHIR Questionnaire item type
+	- `text`: non-empty string when `type` is not `group`/`display`
+	- `answerOption`: non-empty array when `type` is `choice`/`open-choice`
+
+### Quick validation
+
+Run the validator script included in this repo:
+
+```bash
+python3 scripts/validate_prompt_completion_dataset.py data/synthetic-aiprom-1500-firh4.jsonl
+```
+
+## Secondary dataset: AIPROM Items (FHIR R4 QuestionnaireItem-like)
+
+File: `data/aiprom-items-dataset-fhir-4-150.jsonl`
 
 
-### data/aiprom-dataset-fhir-4-150.jsonl coverage
+### data/aiprom-items-dataset-fhir-4-150.jsonl coverage
 
-Current snapshot (2026-02-22):
+Current snapshot (2026-02-23):
 
 - Total examples: **150**
 - Format: JSONL, one object per line, with ChatML-in-a-string under `text`
@@ -52,7 +138,7 @@ Current snapshot (2026-02-22):
 
 #### Content coverage
 
-- Validated PROMs questionnaires: EORTC QLQ-C30, PHQ-9, GAD-7, EQ-5D-5L, PROMIS, WPAI, HADS
+- Items derived from (or inspired by) standardized instruments: EORTC QLQ-C30, PHQ-9, GAD-7, EQ-5D-5L, PROMIS, WPAI, HADS
 - Clinical scales present in prompts/items: pain, fatigue, anxiety, depression, quality of life
 
 ## Record format (JSONL)
@@ -83,7 +169,7 @@ Training objective: given the system + user prompt, generate the assistant conte
 
 ## Target output: FHIR R4 QuestionnaireItem JSON
 
-The FHIR-oriented system prompt in `data/aiprom-dataset-fhir-4-150.jsonl` describes output compatible with FHIR R4 Questionnaire items, commonly including:
+The FHIR-oriented system prompt in `data/aiprom-items-dataset-fhir-4-150.jsonl` describes output compatible with FHIR R4 Questionnaire items, commonly including:
 
 - `linkId`: string (stable identifier for item)
 - `text`: question text shown to patient/user
@@ -97,7 +183,7 @@ Important: examples are intentionally minimal QuestionnaireItem-like JSON fragme
 
 ### FHIR item types observed
 
-From inspection of `data/aiprom-dataset-fhir-4-150.jsonl`, all 13 Questionnaire item types are represented:
+From inspection of `data/aiprom-items-dataset-fhir-4-150.jsonl`, all 13 Questionnaire item types are represented:
 
 - `group`, `display`, `boolean`, `decimal`, `integer`, `date`, `dateTime`, `time`, `string`, `text`, `url`, `choice`, `open-choice`
 
@@ -122,11 +208,29 @@ The assistant JSON usually encodes instrument + item intent through `linkId`, `t
 ## Scope
 
 - This project currently handles **FHIR-only** dataset cases.
-- The source of truth for training is `data/aiprom-dataset-fhir-4-150.jsonl`.
+- For complete questionnaire generation, the source dataset is `data/synthetic-aiprom-1500-firh4.jsonl`.
+- For item-only (QuestionnaireItem-like) generation, the source dataset is `data/aiprom-items-dataset-fhir-4-150.jsonl`.
 
 ## Extending the dataset
 
-When adding new examples:
+This repo supports extending both dataset formats.
+
+### Prompt/Completion JSONL (Questionnaire generation)
+
+When adding new examples to `data/synthetic-aiprom-1500-firh4.jsonl` (or similar):
+
+1. Keep **one JSON object per line**.
+2. Include a non-empty string `prompt`.
+3. Include a non-empty string `completion` that parses as JSON.
+4. Ensure `completion` JSON is a **FHIR R4 `Questionnaire`** object:
+	 - `resourceType == "Questionnaire"`
+	 - `item` is a non-empty array
+	 - each `item` has `linkId` and `type`
+	 - if `type` is `choice/open-choice`, include non-empty `answerOption`
+
+### ChatML-in-a-string JSONL (QuestionnaireItem-like generation)
+
+When adding new examples to `data/aiprom-items-dataset-fhir-4-150.jsonl` (or similar):
 
 1. Keep **one JSON object per line**.
 2. Keep `text` in **ChatML** with `system`, `user`, `assistant` turns.
@@ -138,23 +242,36 @@ When adding new examples:
 
 ## Quick validation checklist
 
-Recommended checks before training:
+Recommended checks before training depend on the dataset format.
+
+### Prompt/Completion JSONL (Questionnaire)
+
+- JSONL parseable: every line is valid JSON
+- Each row has non-empty `prompt` and `completion`
+- `completion` parses as JSON and `resourceType == "Questionnaire"`
+- `item` exists and is non-empty
+
+Run:
+
+```bash
+python3 scripts/validate_prompt_completion_dataset.py data/synthetic-aiprom-1500-firh4.jsonl
+```
+
+### ChatML-in-a-string JSONL (QuestionnaireItem-like)
 
 - JSONL parseable: every line is valid JSON
 - `text` contains the three ChatML roles in order: system → user → assistant
 - Extracted assistant segment is valid JSON
 - Assistant JSON contains at least: `linkId`, `text`, `type`, `required`, `code`
 - If `type == choice`: verify `answerOption` exists and is non-empty
-- If `type == integer`: verify numeric constraints (`minValue`/`maxValue`) when required by your prompt contract
 
-If you want a lightweight validator, you can implement a script that:
+Run:
 
-- Reads `data/*.jsonl`
-- Parses each line JSON
-- Splits `text` on `<|im_start|>assistant` and `<|im_end|>`
-- Attempts `json.loads()` on the assistant content
+```bash
+python3 scripts/normalize_dataset.py data/aiprom-items-dataset-fhir-4-150.jsonl
+```
 
-Keep the validator strict (fail fast), because small format errors can silently degrade training quality.
+Keep validators strict (fail fast), because small format errors can silently degrade training quality.
 
 ## Legal & Copyright Notice
 
@@ -184,7 +301,7 @@ This section is provided for engineering guidance and risk awareness only; it is
 
 ### Scope note for this document
 
-- This document tracks the current FHIR dataset (`data/aiprom-dataset-fhir-4-150.jsonl`).
+- This document tracks the current FHIR datasets (`data/synthetic-aiprom-1500-firh4.jsonl` and `data/aiprom-items-dataset-fhir-4-150.jsonl`).
 - Licensing constraints above still apply regardless of serialization format (FieldTemplate or FHIR).
 
 

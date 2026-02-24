@@ -26,7 +26,7 @@ This repository contains dataset(s) and utilities for supervised fine-tuning (SF
 Normalize (and validate) the FHIR dataset in-place:
 
 ```bash
-python3 scripts/normalize_dataset.py data/aiprom-dataset-fhir-4-150.jsonl
+python3 scripts/normalize_dataset.py data/aiprom-items-dataset-fhir-4-150.jsonl
 ```
 
 This will:
@@ -170,8 +170,8 @@ This section is provided for engineering guidance and risk awareness only; it is
 
 If you want a lower-risk subset for commercial use, consider excluding instruments with registration/licensing restrictions and keeping only clearly permissive instruments plus custom/original fields.
 
-For the current FHIR workflow, use `data/aiprom-dataset-fhir-4-150.jsonl` as the source dataset and create filtered derivatives with your own inclusion/exclusion rules per instrument licensing.
+For the current FHIR workflow, use `data/aiprom-items-dataset-fhir-4-150.jsonl` as the source dataset and create filtered derivatives with your own inclusion/exclusion rules per instrument licensing.
 
 Current full dataset size: **150 examples** (see [docs/datasets.md](docs/datasets.md)).
 
-Tip: keep filtered outputs as separate files (e.g., `data/aiprom-dataset-fhir-4-150-commercial.jsonl`) and document the filtering criteria used.
+Tip: keep filtered outputs as separate files (e.g., `data/aiprom-items-dataset-fhir-4-150-commercial.jsonl`) and document the filtering criteria used.
