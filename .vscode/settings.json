@@ -1,0 +1,41 @@
+{
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.diagnosticMode": "openFilesOnly",
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportUnknownVariableType": "none",
+    "reportUnknownMemberType": "none",
+    "reportUnknownArgumentType": "none",
+    "reportUnknownLambdaType": "none",
+    "reportUnknownParameterType": "none",
+    "reportUnknownReturnType": "none",
+    "reportUnknownInstanceType": "none",
+    "reportMissingTypeStubs": "none",
+    "reportUndefinedVariable": "none",
+    "reportArgumentType": "none",
+    "reportCallIssue": "none",
+    "reportUnusedExpression": "none",
+    "reportUnusedImport": "none",
+    "reportUnusedVariable": "none"
+  },
+  "cSpell.ignorePaths": [
+    "lab/qwen-7b.ipynb"
+  ],
+  "cSpell.words": [
+    "FHIR",
+    "ChatML",
+    "chatml",
+    "codecarbon",
+    "gguf",
+    "mlx",
+    "qlora",
+    "lora",
+    "safetensors",
+    "linkId",
+    "valueCoding",
+    "aiprom"
+  ],
+  "ruff.lint.ignore": [
+    "F401",
+    "F841"
+  ]
+}
