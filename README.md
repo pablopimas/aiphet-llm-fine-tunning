@@ -97,36 +97,42 @@ For this project (`Qwen2.5` family), the direct MLX flag `--export-gguf` may fai
 
 `Model type qwen2 not supported for GGUF conversion.`
 
-Use this workflow instead:
+Also, fusing on top of a `4bit` base can produce conversion errors in `llama.cpp` (for example unsupported quantization metadata or tensor mapping issues).
 
-1) Fuse base model + trained LoRA adapter (MLX):
+Use this validated workflow instead (fuse with the non-quantized base, then convert):
+
+1) Fuse base model + trained LoRA adapter (MLX, non-4bit base):
 
 ```bash
 python -m mlx_lm fuse \
-	--model mlx-community/Qwen2.5-7B-Instruct-4bit \
+	--model Qwen/Qwen2.5-7B-Instruct \
 	--adapter-path lab/artifacts/<MODEL_ALIAS>/checkpoints_stable \
-	--save-path lab/artifacts/<MODEL_ALIAS>/fused
+	--save-path lab/artifacts/<MODEL_ALIAS>-fused-fp
 ```
 
 2) Convert fused HF model to GGUF with `llama.cpp`:
 
 ```bash
-python convert_hf_to_gguf.py \
-	lab/artifacts/<MODEL_ALIAS>/fused \
-	--outfile lab/artifacts/<MODEL_ALIAS>/fused/model-fused-f16.gguf \
+python lab/artifacts/llama.cpp/convert_hf_to_gguf.py \
+	lab/artifacts/<MODEL_ALIAS>-fused-fp \
+	--outfile lab/artifacts/<MODEL_ALIAS>-fused-fp/model-fused-f16.gguf \
 	--outtype f16
 ```
 
 3) (Optional, recommended) Quantize for lighter inference:
 
 ```bash
-./llama-quantize \
-	lab/artifacts/<MODEL_ALIAS>/fused/model-fused-f16.gguf \
-	lab/artifacts/<MODEL_ALIAS>/fused/model-fused-q4_k_m.gguf \
+lab/artifacts/llama.cpp/build/bin/llama-quantize \
+	lab/artifacts/<MODEL_ALIAS>-fused-fp/model-fused-f16.gguf \
+	lab/artifacts/<MODEL_ALIAS>-fused-fp/model-fused-q4_k_m.gguf \
 	q4_k_m
 ```
 
 4) Import the generated `.gguf` file into LM Studio (`My Models` -> `Import`).
+
+Recommended import target for lightweight local inference:
+
+- `lab/artifacts/<MODEL_ALIAS>-fused-fp/model-fused-q4_k_m.gguf`
 
 ## Legal & Copyright Notice
 
