@@ -1,0 +1,2 @@
+model_name,model_alias,go_no_go_decision,adapter_relaxed_rate,baseline_relaxed_rate,relaxed_delta_pp,adapter_parseable_json_rate,train_duration_sec,emissions_kg_co2eq,updated_at_utc
+mlx-community/Qwen2.5-7B-Instruct-4bit,mlx-community-qwen2.5-7b-instruct-4bit,GO,70.00,20.00,50.00,70.00,8060.32,0.018900,2026-02-28T23:23:18.389930+00:00
