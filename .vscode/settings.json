@@ -18,7 +18,7 @@
     "reportUnusedVariable": "none"
   },
   "cSpell.ignorePaths": [
-    "lab/qwen-7b.ipynb"
+    "lab/aiprom-fhir-finetune.ipynb"
   ],
   "cSpell.words": [
     "FHIR",

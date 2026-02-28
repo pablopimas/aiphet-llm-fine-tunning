@@ -37,7 +37,7 @@ This will:
 
 ## Training notebook (end-to-end)
 
-Use the notebook [lab/qwen-7b.ipynb](lab/qwen-7b.ipynb) for the full reproducible workflow:
+Use the notebook [lab/aiprom-fhir-finetune.ipynb](lab/aiprom-fhir-finetune.ipynb) for the full reproducible workflow:
 
 - environment and reproducibility snapshot,
 - dataset parsing and FHIR structural validation,
