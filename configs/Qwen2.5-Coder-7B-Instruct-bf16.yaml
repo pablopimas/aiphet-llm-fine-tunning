@@ -1,0 +1,42 @@
+# MLX-LM LoRA config for Qwen2.5-Coder-14B-Instruct (full precision / highest quality)
+# Usage:
+#   python -m mlx_lm lora -c configs/qwen2_5_coder_14b_instruct_fp16.yaml
+#
+# Notes:
+# - Do NOT reuse adapter_path from the 4-bit run; keep adapters separate.
+# - This base model is full precision (BF16/FP16) and is the right starting point
+#   if you want a high-fidelity fused model and GGUF export later.
+
+model: mlx-community/Qwen2.5-Coder-7B-Instruct-bf16
+train: true
+fine_tune_type: lora
+
+# MLX-LM expects a directory containing train.jsonl + valid.jsonl.
+# This repo materializes these under: lab/artifacts/
+data: lab/artifacts
+
+# Keep adapter outputs isolated from the 4-bit run.
+adapter_path: lab/artifacts/Qwen2.5-Coder-7B-Instruct-bf16/checkpoints_stable
+
+optimizer: adamw
+learning_rate: 1.0e-5
+iters: 1600
+batch_size: 1
+grad_accumulation_steps: 16
+max_seq_length: 2048
+
+# More adapted layers usually improves quality (at higher compute cost).
+num_layers: 16
+
+# Helps memory headroom for 14B.
+grad_checkpoint: true
+
+steps_per_report: 100
+steps_per_eval: 100
+save_every: 100
+seed: 173
+
+lora_parameters:
+  rank: 32
+  scale: 2.0
+  dropout: 0.0
