@@ -23,10 +23,36 @@ This repository contains dataset(s) and utilities for supervised fine-tuning (SF
 
 ## Quick start
 
+Create and install the Poetry environment:
+
+```bash
+poetry env use 3.11
+poetry install
+```
+
+Run an interactive shell in the project environment:
+
+```bash
+poetry shell
+```
+
+Run commands inside the Poetry environment:
+
+```bash
+poetry run python scripts/normalize_dataset.py data/aiprom-items-dataset-fhir-4-150.jsonl
+```
+
+If you prefer an interactive shell:
+
+```bash
+poetry shell
+python scripts/normalize_dataset.py data/aiprom-items-dataset-fhir-4-150.jsonl
+```
+
 Normalize (and validate) the FHIR dataset in-place:
 
 ```bash
-python3 scripts/normalize_dataset.py data/aiprom-items-dataset-fhir-4-150.jsonl
+poetry run python scripts/normalize_dataset.py data/aiprom-items-dataset-fhir-4-150.jsonl
 ```
 
 This will:
@@ -87,7 +113,7 @@ Yes. Running the training cell produces a **specialized LoRA adapter** over the 
 After training, you can run an inference test with MLX-LM using the adapter directory:
 
 ```bash
-python -m mlx_lm.generate \
+poetry run python -m mlx_lm.generate \
 	--model mlx-community/Qwen2.5-7B-Instruct-4bit \
 	--adapter-path lab/artifacts/<MODEL_ALIAS>/checkpoints_stable \
 	--prompt "<|im_start|>system\nYou are a FHIR R4 expert.\n<|im_end|><|im_start|>user\nGenerate a QuestionnaireItem for PHQ-9 depressed mood\n<|im_end|><|im_start|>assistant\n" \
@@ -109,7 +135,7 @@ Use this validated workflow instead (fuse with the non-quantized base, then conv
 1) Fuse base model + trained LoRA adapter (MLX, non-4bit base):
 
 ```bash
-python -m mlx_lm fuse \
+poetry run python -m mlx_lm fuse \
 	--model Qwen/Qwen2.5-7B-Instruct \
 	--adapter-path lab/artifacts/<MODEL_ALIAS>/checkpoints_stable \
 	--save-path lab/artifacts/<MODEL_ALIAS>-fused-fp
@@ -118,7 +144,7 @@ python -m mlx_lm fuse \
 2) Convert fused HF model to GGUF with `llama.cpp`:
 
 ```bash
-python lab/artifacts/llama.cpp/convert_hf_to_gguf.py \
+poetry run python lab/artifacts/llama.cpp/convert_hf_to_gguf.py \
 	lab/artifacts/<MODEL_ALIAS>-fused-fp \
 	--outfile lab/artifacts/<MODEL_ALIAS>-fused-fp/model-fused-f16.gguf \
 	--outtype f16

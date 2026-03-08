@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "aiprom-llm"
+version = "0.1.0"
+description = "Dataset and utilities for supervised fine-tuning to generate FHIR R4 Questionnaire JSON"
+authors = ["Pablo Pimàs <pablo@pimas.cat>"]
+license = "CC-BY-4.0"
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.15"
+mlx-lm = ">=0.30.0"
+datasets = ">=2.18.0"
+pyyaml = ">=6.0.1"
+
+[tool.poetry.group.dev.dependencies]
+black = "*"
+ruff = "*"
+
+[build-system]
+requires = ["poetry-core>=1.9.0"]
+build-backend = "poetry.core.masonry.api"

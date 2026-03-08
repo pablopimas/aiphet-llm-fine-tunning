@@ -9,11 +9,11 @@ This directory stores:
 Manual generation:
 
 ```bash
-python scripts/update_tunes_reports.py --repo-root .
+poetry run python scripts/update_tunes_reports.py --repo-root .
 ```
 
 To update only one model:
 
 ```bash
-python scripts/update_tunes_reports.py --repo-root . --model-name "mlx-community/Qwen2.5-7B-Instruct-4bit"
+poetry run python scripts/update_tunes_reports.py --repo-root . --model-name "mlx-community/Qwen2.5-7B-Instruct-4bit"
 ```
