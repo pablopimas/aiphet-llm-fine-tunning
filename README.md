@@ -58,20 +58,25 @@ If `AIPROM_MODEL_ALIAS` is not provided, it is derived from `AIPROM_MODEL_NAME`.
 
 ### What artifacts does it generate?
 
-The notebook writes reproducibility and training artifacts under:
+The notebook writes artifacts in two scopes:
 
-- `lab/artifacts/<MODEL_ALIAS>/`
+- Shared dataset/run artifacts in `lab/artifacts/`
+- Model-specific artifacts in `lab/artifacts/<MODEL_ALIAS>/`
 
 Typical files include:
 
-- `lab/artifacts/<MODEL_ALIAS>/split_manifest.json`
-- `lab/artifacts/<MODEL_ALIAS>/train.jsonl`
-- `lab/artifacts/<MODEL_ALIAS>/val.jsonl`
-- `lab/artifacts/<MODEL_ALIAS>/valid.jsonl`
-- `lab/artifacts/<MODEL_ALIAS>/dataset_manifest.json`
-- `lab/artifacts/<MODEL_ALIAS>/training_config_stable.json`
-- `lab/artifacts/<MODEL_ALIAS>/training_run_log.json`
-- checkpoints/adapters in `lab/artifacts/<MODEL_ALIAS>/checkpoints_stable`
+- Shared (`lab/artifacts/`):
+	- `split_manifest.json`
+	- `train.jsonl`
+	- `val.jsonl`
+	- `valid.jsonl`
+	- `dataset_manifest.json`
+	- `training_run_log.json`
+	- energy tracking under `energy/` (`emissions.csv`, `*_energy.json`)
+- Model-specific (`lab/artifacts/<MODEL_ALIAS>/`):
+	- `training_config_stable.json`
+	- checkpoints/adapters in `checkpoints_stable/`
+	- fused exports under `fused/` and `fused-noquant/`
 
 ### Does it produce a specialized model?
 
