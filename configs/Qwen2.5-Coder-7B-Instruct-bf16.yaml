@@ -18,25 +18,25 @@ data: lab/artifacts
 adapter_path: lab/artifacts/Qwen2.5-Coder-7B-Instruct-bf16/checkpoints_stable
 
 optimizer: adamw
-learning_rate: 1.0e-5
-iters: 800
+learning_rate: 7.0e-6
+iters: 600
 batch_size: 1
 grad_accumulation_steps: 8
 max_seq_length: 512
 
 # Conservative LoRA depth to avoid OOM in 7B bf16.
-num_layers: 6
+num_layers: 4
 
 # Helps memory headroom.
 grad_checkpoint: true
 weight_decay: 0.01
 
-steps_per_report: 100
-steps_per_eval: 100
-save_every: 100
+steps_per_report: 200
+steps_per_eval: 400
+save_every: 200
 seed: 173
 
 lora_parameters:
-  rank: 8
+  rank: 4
   scale: 8.0
   dropout: 0.0
