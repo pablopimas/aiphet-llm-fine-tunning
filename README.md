@@ -9,17 +9,27 @@ Reference: https://creativecommons.org/licenses/by/4.0/
 
 # aiprom-llm
 
-This repository contains dataset(s) and utilities for supervised fine-tuning (SFT) an LLM (currently **mlx-community/Qwen2.5-7B-Instruct-4bit**) to generate strict **FHIR R4 QuestionnaireItem JSON** objects.
+This repository contains the dataset, notebook workflow, and utility scripts used to fine-tune MLX-compatible Qwen models for **FHIR R4 Questionnaire** generation.
+
+The current documented workflow is aligned with the checked-in assets in this repository:
+
+- dataset: `data/synthetic-aiprom-1500-firh4.jsonl`
+- notebook: `lab/aiprom-fhir-finetune.ipynb`
+- active configs: `configs/Qwen2.5-Coder-7B-Instruct-bf16.yaml` and `configs/Qwen2.5-Coder-3B-Instruct-bf16.yaml`
+- reporting: `tunes/leaderboard.md` and `tunes/models/*.md`
 
 ## Documents
 
-- [Datasets](docs/datasets.md)
+- [Datasets](datasets.md)
+- [Notebook Publication Checklist](notebook-publication-checklist.md)
 
 ## What is in this repo
 
-- SFT datasets under `data/` (JSONL with ChatML stored in a `text` string)
-- A deterministic FHIR dataset normalizer/validator: `scripts/normalize_dataset.py`
-- Training/config helpers under `configs/` (currently minimal)
+- Prompt/completion SFT dataset under `data/`
+- Reproducible end-to-end notebook workflow under `lab/`
+- Training/config helpers under `configs/`
+- Validation and reporting scripts under `scripts/`
+- Tune reports and packaged release assets under `tunes/`
 
 ## Quick start
 
@@ -36,30 +46,29 @@ Run an interactive shell in the project environment:
 poetry shell
 ```
 
-Run commands inside the Poetry environment:
+Validate the current committed dataset:
 
 ```bash
-poetry run python scripts/normalize_dataset.py data/aiprom-items-dataset-fhir-4-150.jsonl
+poetry run python scripts/validate_prompt_completion_dataset.py data/synthetic-aiprom-1500-firh4.jsonl
 ```
 
-If you prefer an interactive shell:
+Run the notebook workflow from the repository root:
 
 ```bash
-poetry shell
-python scripts/normalize_dataset.py data/aiprom-items-dataset-fhir-4-150.jsonl
+poetry run jupyter lab lab/aiprom-fhir-finetune.ipynb
 ```
 
-Normalize (and validate) the FHIR dataset in-place:
+If you prefer the CLI training entrypoint, pass the checked-in YAML directly:
 
 ```bash
-poetry run python scripts/normalize_dataset.py data/aiprom-items-dataset-fhir-4-150.jsonl
+poetry run python -m mlx_lm lora -c configs/Qwen2.5-Coder-7B-Instruct-bf16.yaml
 ```
 
-This will:
+## Current workflow target
 
-- Parse each JSONL ChatML row and validate the assistant payload as QuestionnaireItem-like JSON
-- Apply safe FHIR normalization (`type`, `required`, `code`) and reuse canonical `answerOption`/`code` on duplicates by `(linkId, type)`
-- Exit non-zero if blocking issues remain (e.g., invalid `type`, missing `linkId`, invalid `code`, missing `answerOption` for `choice/open-choice`)
+This repository currently documents and ships a workflow for generating **complete FHIR R4 Questionnaire JSON** objects from synthetic prompt/completion pairs.
+
+It does not currently ship the historical 150-example QuestionnaireItem dataset that older drafts of the docs referenced.
 
 ## Training notebook (end-to-end)
 
@@ -77,10 +86,16 @@ Use the notebook [lab/aiprom-fhir-finetune.ipynb](lab/aiprom-fhir-finetune.ipynb
 The notebook now reads model selection from the first configuration cell and supports per-model artifact isolation.
 
 - `AIPROM_MODEL_BACKEND` (currently supported by this notebook: `mlx_lm`)
-- `AIPROM_MODEL_NAME` (example: `mlx-community/Qwen2.5-7B-Instruct-4bit`)
+- `AIPROM_CONFIG` (recommended: path to one of the checked-in YAML configs)
+- `AIPROM_MODEL_NAME` (optional override; normally derived from config)
 - `AIPROM_MODEL_ALIAS` (optional override for artifact folder naming)
 
 If `AIPROM_MODEL_ALIAS` is not provided, it is derived from `AIPROM_MODEL_NAME`.
+
+Current checked-in configs:
+
+- `configs/Qwen2.5-Coder-7B-Instruct-bf16.yaml`
+- `configs/Qwen2.5-Coder-3B-Instruct-bf16.yaml`
 
 ### What artifacts does it generate?
 
@@ -97,16 +112,16 @@ Typical files include:
 	- `val.jsonl`
 	- `valid.jsonl`
 	- `dataset_manifest.json`
-	- `training_run_log.json`
-	- energy tracking under `energy/` (`emissions.csv`, `*_energy.json`)
 - Model-specific (`lab/artifacts/<MODEL_ALIAS>/`):
 	- `training_config_stable.json`
 	- checkpoints/adapters in `checkpoints_stable/`
 	- fused exports under `fused/` and `fused-noquant/`
 
+Transient runtime logs such as `training_run_log.json`, `gguf_export_log.json`, `emissions.csv`, and `*_energy.json` are generated locally during experiments but are not part of the published repository snapshot.
+
 ### Does it produce a specialized model?
 
-Yes. Running the training cell produces a **specialized LoRA adapter** over the base Qwen model for FHIR QuestionnaireItem-style generation. It does not replace the base model weights; it creates adapter weights that are loaded on top of the base model.
+Yes. Running the training cell produces a **specialized LoRA adapter** over the selected base Qwen model for FHIR Questionnaire generation. It does not replace the base model weights; it creates adapter weights that are loaded on top of the base model.
 
 ### Quick inference with the trained adapter
 
@@ -114,9 +129,9 @@ After training, you can run an inference test with MLX-LM using the adapter dire
 
 ```bash
 poetry run python -m mlx_lm.generate \
-	--model mlx-community/Qwen2.5-7B-Instruct-4bit \
+	--model mlx-community/Qwen2.5-Coder-7B-Instruct-bf16 \
 	--adapter-path lab/artifacts/<MODEL_ALIAS>/checkpoints_stable \
-	--prompt "<|im_start|>system\nYou are a FHIR R4 expert.\n<|im_end|><|im_start|>user\nGenerate a QuestionnaireItem for PHQ-9 depressed mood\n<|im_end|><|im_start|>assistant\n" \
+	--prompt "<|im_start|>system\nYou are a FHIR R4 expert.\n<|im_end|><|im_start|>user\nGenerate a complete FHIR Questionnaire for PHQ-9 depression assessment\n<|im_end|><|im_start|>assistant\n" \
 	--max-tokens 400
 ```
 
@@ -128,7 +143,7 @@ For this project (`Qwen2.5` family), the direct MLX flag `--export-gguf` may fai
 
 `Model type qwen2 not supported for GGUF conversion.`
 
-Also, fusing on top of a `4bit` base can produce conversion errors in `llama.cpp` (for example unsupported quantization metadata or tensor mapping issues).
+Also, fusing on top of certain quantized bases can produce conversion errors in `llama.cpp` (for example unsupported quantization metadata or tensor mapping issues).
 
 Use this validated workflow instead (fuse with the non-quantized base, then convert):
 
@@ -178,13 +193,17 @@ Copyright (c) 2026 Pablo Pimàs.
 
 ### Base model copyright and license
 
-This project fine-tunes the third-party base model `mlx-community/Qwen2.5-7B-Instruct-4bit`.
+This repository currently ships configs for third-party base models in the Qwen2.5-Coder family:
 
-Hugging Face repository (base model used in this project):
+- `mlx-community/Qwen2.5-Coder-7B-Instruct-bf16`
+- `mlx-community/Qwen2.5-Coder-3B-Instruct-bf16`
 
-- https://huggingface.co/mlx-community/Qwen2.5-7B-Instruct-4bit
+Representative Hugging Face repositories:
 
-- Declared license for `mlx-community/Qwen2.5-7B-Instruct-4bit`: **Apache-2.0**.
+- https://huggingface.co/mlx-community/Qwen2.5-Coder-7B-Instruct-bf16
+- https://huggingface.co/mlx-community/Qwen2.5-Coder-3B-Instruct-bf16
+
+- Declared license for these `mlx-community` distributions: **Apache-2.0**.
 - The original Qwen model family is provided by its respective authors/rights holders (Qwen/Alibaba Cloud) and is governed by its own model license and terms.
 - The `mlx-community` repository is a converted distribution of model weights for MLX usage and remains subject to the upstream model licensing constraints.
 - LoRA adapters generated in this repository are derivative artifacts that must be used and distributed in compliance with the base model license.
@@ -221,8 +240,8 @@ This section is provided for engineering guidance and risk awareness only; it is
 
 If you want a lower-risk subset for commercial use, consider excluding instruments with registration/licensing restrictions and keeping only clearly permissive instruments plus custom/original fields.
 
-For the current FHIR workflow, use `data/aiprom-items-dataset-fhir-4-150.jsonl` as the source dataset and create filtered derivatives with your own inclusion/exclusion rules per instrument licensing.
+For the current FHIR workflow, use `data/synthetic-aiprom-1500-firh4.jsonl` as the source dataset and create filtered derivatives with your own inclusion/exclusion rules per instrument licensing.
 
-Current full dataset size: **150 examples** (see [docs/datasets.md](docs/datasets.md)).
+Current full dataset size: **1500 examples** (see [datasets.md](datasets.md)).
 
-Tip: keep filtered outputs as separate files (e.g., `data/aiprom-items-dataset-fhir-4-150-commercial.jsonl`) and document the filtering criteria used.
+Tip: keep filtered outputs as separate files and document the filtering criteria used.

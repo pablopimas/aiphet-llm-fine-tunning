@@ -2,7 +2,13 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 
+.DS_Store
+.env
+.env.*
+.idea/
+.venv/
+.vscode/
+*.gguf
+
 lab/artifacts/
-*.DS_STORE
-tools
-tunes
+tools/llama.cpp/

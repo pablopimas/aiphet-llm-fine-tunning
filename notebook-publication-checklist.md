@@ -4,6 +4,9 @@ Date (UTC): 2026-03-08
 Notebook: `lab/aiprom-fhir-finetune.ipynb`
 Model alias: `mlx-community-qwen2.5-coder-3b-instruct-bf16`
 
+This file records an archived publication snapshot for the 3B run.
+It is not the single source of truth for the repository's current default model/configuration.
+
 ## 1) Documentation and paths
 
 - [x] README artifact paths aligned with real output layout (shared vs model-scoped).
@@ -15,8 +18,6 @@ Model alias: `mlx-community-qwen2.5-coder-3b-instruct-bf16`
 - [x] `lab/artifacts/val.jsonl`
 - [x] `lab/artifacts/valid.jsonl`
 - [x] `lab/artifacts/dataset_manifest.json`
-- [x] `lab/artifacts/training_run_log.json`
-- [x] `lab/artifacts/energy/emissions.csv`
 - [x] `lab/artifacts/mlx-community-qwen2.5-coder-3b-instruct-bf16/training_config_stable.json`
 - [x] `lab/artifacts/mlx-community-qwen2.5-coder-3b-instruct-bf16/checkpoints_stable/adapters.safetensors`
 - [x] `lab/artifacts/mlx-community-qwen2.5-coder-3b-instruct-bf16/fused-noquant/aiphet-qwen2.5-3b-fhir-f16.gguf`
@@ -27,17 +28,24 @@ Model alias: `mlx-community-qwen2.5-coder-3b-instruct-bf16`
 - [x] `tunes/leaderboard.md`
 - [x] `tunes/leaderboard.csv`
 
-## 4) Evaluation/decision artifacts (missing)
+## 4) Runtime logs (excluded from publication snapshot)
+
+- [x] `lab/artifacts/training_run_log.json`
+- [x] `lab/artifacts/energy/emissions.csv`
+- [x] `lab/artifacts/energy/*_energy.json`
+- [x] `lab/artifacts/*/gguf_export_log.json`
+
+## 5) Evaluation/decision artifacts (missing)
 
 - [ ] `lab/artifacts/ab_rule_eval.json`
 - [ ] `lab/artifacts/adapter_go_no_go.json`
 
-## 5) Release decision (current)
+## 6) Release decision (current)
 
 - Status: **NOT READY** for final publication if strict release requires A/B evaluation + GO/NO-GO artifacts.
 - Status: **READY** for publication as training + export reproducibility report only.
 
-## 6) Pending actions (without running full notebook)
+## 7) Pending actions (without running full notebook)
 
 1. Generate missing evaluation artifacts by running only the evaluation/go-no-go section cells.
 2. Re-run `scripts/update_tunes_reports.py` if you want leaderboard fields to include evaluation metrics.
