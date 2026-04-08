@@ -14,8 +14,8 @@ fine_tune_type: lora
 # This repo materializes these under: lab/artifacts/
 data: lab/artifacts
 
-# Keep adapter outputs isolated from the 4-bit run.
-adapter_path: lab/artifacts/Qwen2.5-Coder-7B-Instruct-bf16/checkpoints_stable
+# Keep adapter outputs isolated using the repository's canonical slugified alias.
+adapter_path: lab/artifacts/mlx-community-qwen2.5-coder-7b-instruct-bf16/checkpoints_stable
 
 optimizer: adamw
 learning_rate: 7.0e-6

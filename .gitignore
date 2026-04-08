@@ -10,5 +10,8 @@ __pycache__/
 .vscode/
 *.gguf
 
+# Local runtime artifacts produced by the notebook and helper scripts.
+# Published snapshots summarize these files in docs/reports, but the raw
+# experiment artifacts under lab/artifacts/ are intentionally not versioned.
 lab/artifacts/
 tools/llama.cpp/

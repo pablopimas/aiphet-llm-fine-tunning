@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -89,6 +90,9 @@ def _extract_eval_summary(
     eval_payload: dict[str, Any] | None,
     analysis_payload: dict[str, Any] | None,
     go_no_go_payload: dict[str, Any] | None,
+    *,
+    expected_model_name: str,
+    expected_model_alias: str,
 ) -> dict[str, Any]:
     out: dict[str, Any] = {
         "adapter_parseable_json_rate": None,
@@ -103,7 +107,15 @@ def _extract_eval_summary(
         "n_eval_samples": None,
     }
 
-    if eval_payload:
+    payload_cfg = _as_dict(eval_payload.get("config")) if eval_payload else {}
+    payload_model_name = str(payload_cfg.get("model", "")).strip()
+    payload_model_alias = str(payload_cfg.get("model_alias", "")).strip()
+    matches_model = (
+        payload_model_name == expected_model_name
+        or payload_model_alias == expected_model_alias
+    )
+
+    if eval_payload and matches_model:
         baseline = _as_dict(eval_payload.get("baseline"))
         adapter = _as_dict(eval_payload.get("adapter"))
         baseline_rates = _as_dict(baseline.get("rule_pass_rates"))
@@ -113,7 +125,7 @@ def _extract_eval_summary(
         if isinstance(adapter.get("n"), int):
             out["n_eval_samples"] = adapter.get("n")
 
-    if analysis_payload:
+    if analysis_payload and matches_model:
         strict = _as_dict(analysis_payload.get("strict"))
         relaxed = _as_dict(analysis_payload.get("relaxed"))
 
@@ -136,7 +148,7 @@ def _extract_eval_summary(
         if isinstance(out["adapter_relaxed_rate"], float) and isinstance(out["baseline_relaxed_rate"], float):
             out["relaxed_delta_pp"] = out["adapter_relaxed_rate"] - out["baseline_relaxed_rate"]
 
-    if go_no_go_payload and isinstance(go_no_go_payload.get("decision"), str):
+    if go_no_go_payload and matches_model and isinstance(go_no_go_payload.get("decision"), str):
         out["go_no_go_decision"] = str(go_no_go_payload["decision"])
 
     return out
@@ -180,7 +192,13 @@ def collect_model_summary(repo_root: Path, model_artifact_root: Path) -> ModelTu
     eval_payload = _safe_json(global_artifacts / "ab_rule_eval.json")
     analysis_payload = _safe_json(global_artifacts / "ab_rule_eval_analysis.json")
     go_no_go_payload = _safe_json(global_artifacts / "adapter_go_no_go.json")
-    eval_summary = _extract_eval_summary(eval_payload, analysis_payload, go_no_go_payload)
+    eval_summary = _extract_eval_summary(
+        eval_payload,
+        analysis_payload,
+        go_no_go_payload,
+        expected_model_name=model_name,
+        expected_model_alias=model_alias,
+    )
 
     summary.adapter_parseable_json_rate = eval_summary["adapter_parseable_json_rate"]
     summary.baseline_parseable_json_rate = eval_summary["baseline_parseable_json_rate"]
@@ -192,6 +210,78 @@ def collect_model_summary(repo_root: Path, model_artifact_root: Path) -> ModelTu
     summary.relaxed_delta_pp = eval_summary["relaxed_delta_pp"]
     summary.go_no_go_decision = eval_summary["go_no_go_decision"]
     summary.n_eval_samples = eval_summary["n_eval_samples"]
+
+    return summary
+
+
+def _parse_fmt_num(value: str) -> float | int | None:
+    text = value.strip()
+    if not text or text == "-":
+        return None
+    try:
+        number = float(text)
+    except ValueError:
+        return None
+    if number.is_integer():
+        return int(number)
+    return number
+
+
+def load_existing_model_report(tunes_dir: Path, model_alias: str) -> ModelTuneSummary | None:
+    report_path = tunes_dir / "models" / f"{model_alias}.md"
+    if not report_path.exists():
+        return None
+
+    text = report_path.read_text(encoding="utf-8")
+
+    title_match = re.search(r"^# Tune Report · (.+)$", text, flags=re.MULTILINE)
+    generated_match = re.search(r"^- Generated at \(UTC\): (.+)$", text, flags=re.MULTILINE)
+    alias_match = re.search(r"^- Model alias: `([^`]+)`$", text, flags=re.MULTILINE)
+    artifact_match = re.search(r"^- Artifact root: `([^`]+)`$", text, flags=re.MULTILINE)
+
+    if not (title_match and generated_match and alias_match and artifact_match):
+        return None
+
+    summary = ModelTuneSummary(
+        model_name=title_match.group(1).strip(),
+        model_alias=alias_match.group(1).strip(),
+        artifact_root=Path(artifact_match.group(1).strip()),
+        generated_at_utc=generated_match.group(1).strip(),
+    )
+
+    metric_map = {
+        "Return code": "train_return_code",
+        "Duration (sec)": "train_duration_sec",
+        "Emissions (kg CO2eq)": "emissions_kg_co2eq",
+        "Adapter inference return code": "adapter_inference_return_code",
+        "Baseline inference return code": "baseline_inference_return_code",
+        "Adapter parseable_json (%)": "adapter_parseable_json_rate",
+        "Baseline parseable_json (%)": "baseline_parseable_json_rate",
+        "Samples": "n_eval_samples",
+        "Strict baseline rate (%)": "strict_baseline_rate",
+        "Strict adapter rate (%)": "strict_adapter_rate",
+        "Strict delta (pp)": "strict_delta_pp",
+        "Relaxed baseline rate (%)": "baseline_relaxed_rate",
+        "Relaxed adapter rate (%)": "adapter_relaxed_rate",
+        "Relaxed delta (pp)": "relaxed_delta_pp",
+    }
+
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            continue
+        parts = [part.strip() for part in stripped.strip("|").split("|")]
+        if len(parts) != 2:
+            continue
+        label, value = parts
+        if label == "GO/NO-GO":
+            summary.go_no_go_decision = None if value == "-" else value
+            continue
+        attr_name = metric_map.get(label)
+        if not attr_name:
+            continue
+        parsed = _parse_fmt_num(value)
+        setattr(summary, attr_name, parsed)
 
     return summary
 
@@ -295,7 +385,7 @@ def write_leaderboard(tunes_dir: Path, summaries: list[ModelTuneSummary]) -> tup
     lines = [
         "# Tunes Leaderboard",
         "",
-        "Cumulative model comparison (overwritten by alias when run again).",
+        "Aggregated comparison across the latest known per-model tune reports.",
         "",
         "| Rank | Model | Alias | Decision | Relaxed Adapter % | Relaxed Baseline % | Delta pp | Parseable % | Duration s | Emissions kg | Updated (UTC) |",
         "|---:|---|---|---|---:|---:|---:|---:|---:|---:|---|",
@@ -346,21 +436,38 @@ def main() -> int:
     artifacts_root = repo_root / "lab" / "artifacts"
     tunes_dir = repo_root / "tunes"
 
-    model_dirs = discover_model_dirs(artifacts_root, selected_model_name=args.model_name)
-    if not model_dirs:
+    all_model_dirs = discover_model_dirs(artifacts_root)
+    selected_model_dirs = discover_model_dirs(artifacts_root, selected_model_name=args.model_name)
+
+    if args.model_name and not selected_model_dirs:
+        print("No model artifact directories with training_config_stable.json were found for the selected model.")
+        return 0
+
+    if not all_model_dirs:
         print("No model artifact directories with training_config_stable.json were found.")
         return 0
 
-    summaries: list[ModelTuneSummary] = []
+    summaries_by_alias: dict[str, ModelTuneSummary] = {}
     report_paths: list[Path] = []
 
-    for model_dir in model_dirs:
+    for model_dir in all_model_dirs:
+        model_cfg = _safe_json(model_dir / "training_config_stable.json") or {}
+        model_name = str(_as_dict(model_cfg.get("model")).get("name", "")).strip() or model_dir.name
+        model_alias = slugify_model_name(model_name)
+
+        if args.model_name and model_dir not in selected_model_dirs:
+            existing_summary = load_existing_model_report(tunes_dir, model_alias)
+            if existing_summary is not None:
+                summaries_by_alias[model_alias] = existing_summary
+            continue
+
         summary = collect_model_summary(repo_root, model_dir)
         if summary is None:
             continue
-        summaries.append(summary)
+        summaries_by_alias[summary.model_alias] = summary
         report_paths.append(write_model_report(tunes_dir, summary))
 
+    summaries = list(summaries_by_alias.values())
     if not summaries:
         print("No summaries generated.")
         return 0

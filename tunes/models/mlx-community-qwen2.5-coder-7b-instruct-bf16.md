@@ -1,6 +1,6 @@
 # Tune Report · mlx-community/Qwen2.5-Coder-7B-Instruct-bf16
 
-- Generated at (UTC): 2026-03-08T20:41:58.006995+00:00
+- Generated at (UTC): 2026-04-07T11:55:33.717215+00:00
 - Model alias: `mlx-community-qwen2.5-coder-7b-instruct-bf16`
 - Artifact root: `/Users/CAE9/aiprom-llm/lab/artifacts/mlx-community-qwen2.5-coder-7b-instruct-bf16`
 
@@ -8,9 +8,9 @@
 
 | Metric | Value |
 |---|---:|
-| Return code | -6 |
-| Duration (sec) | 94.57 |
-| Emissions (kg CO2eq) | 0.000222 |
+| Return code | - |
+| Duration (sec) | - |
+| Emissions (kg CO2eq) | - |
 
 ## Inference
 
@@ -18,18 +18,18 @@
 |---|---:|
 | Adapter inference return code | - |
 | Baseline inference return code | - |
-| Adapter parseable_json (%) | - |
-| Baseline parseable_json (%) | - |
+| Adapter parseable_json (%) | 0.00 |
+| Baseline parseable_json (%) | 50.00 |
 
 ## Evaluation
 
 | Metric | Value |
 |---|---:|
-| Samples | - |
-| Strict baseline rate (%) | - |
-| Strict adapter rate (%) | - |
-| Strict delta (pp) | - |
-| Relaxed baseline rate (%) | - |
-| Relaxed adapter rate (%) | - |
-| Relaxed delta (pp) | - |
-| GO/NO-GO | - |
+| Samples | 30 |
+| Strict baseline rate (%) | 0.00 |
+| Strict adapter rate (%) | 0.00 |
+| Strict delta (pp) | 0.00 |
+| Relaxed baseline rate (%) | 40.00 |
+| Relaxed adapter rate (%) | 0.00 |
+| Relaxed delta (pp) | -40.00 |
+| GO/NO-GO | NO_GO |

@@ -1,11 +1,12 @@
 # Notebook Publication Checklist
 
-Date (UTC): 2026-03-08
+Date (UTC): 2026-04-08
 Notebook: `lab/aiprom-fhir-finetune.ipynb`
 Model alias: `mlx-community-qwen2.5-coder-3b-instruct-bf16`
 
-This file records an archived publication snapshot for the 3B run.
-It is not the single source of truth for the repository's current default model/configuration.
+This file records an archived evaluated snapshot for the 3B run.
+It is not the single source of truth for the repository's supported model/configuration set.
+The raw files under `lab/artifacts/` are local runtime artifacts ignored by git; this checklist records the intended local snapshot and should be read together with the checked-in reports under `tunes/`, which are the publication-facing evidence.
 
 ## 1) Documentation and paths
 
@@ -35,18 +36,21 @@ It is not the single source of truth for the repository's current default model/
 - [x] `lab/artifacts/energy/*_energy.json`
 - [x] `lab/artifacts/*/gguf_export_log.json`
 
-## 5) Evaluation/decision artifacts (missing)
+## 5) Evaluation/decision artifacts (present)
 
-- [ ] `lab/artifacts/ab_rule_eval.json`
-- [ ] `lab/artifacts/adapter_go_no_go.json`
+- [x] `lab/artifacts/ab_rule_eval.json`
+- [x] `lab/artifacts/ab_rule_eval_analysis.json`
+- [x] `lab/artifacts/adapter_go_no_go.json`
 
 ## 6) Release decision (current)
 
-- Status: **NOT READY** for final publication if strict release requires A/B evaluation + GO/NO-GO artifacts.
-- Status: **READY** for publication as training + export reproducibility report only.
+- Status: **NOT READY** for final model publication as a successful adapter release.
+- Reason: A/B evaluation artifacts exist, but the recorded decision is **NO_GO** for `mlx-community-qwen2.5-coder-3b-instruct-bf16`.
+- Status: **READY** for publication as a reproducibility snapshot that documents a negative evaluation result.
 
 ## 7) Pending actions (without running full notebook)
 
-1. Generate missing evaluation artifacts by running only the evaluation/go-no-go section cells.
-2. Re-run `scripts/update_tunes_reports.py` if you want leaderboard fields to include evaluation metrics.
-3. Freeze notebook outputs and clear any transient runtime warnings before final share.
+1. Keep `lab/aiprom-fhir-finetune.ipynb` with execution flags disabled by default for publication-safe sharing.
+2. Re-enable `AIPROM_RUN_EVALUATION=1` and `AIPROM_UPDATE_TUNES_REPORTS=1` only when intentionally regenerating A/B artifacts.
+3. Decide whether to publish the current 3B run as a negative-result reproducibility snapshot or rerun after improving adapter quality.
+4. Keep the published notebook in a clean, output-free state unless intentionally sharing a fully curated executed snapshot.

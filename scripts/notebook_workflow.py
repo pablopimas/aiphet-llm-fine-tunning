@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import json
 import os
+import random
 import re
 import shlex
+import subprocess
 from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -416,7 +418,7 @@ def stratified_train_val_test_split(
     if val_ratio <= 0 or test_ratio <= 0 or val_ratio + test_ratio >= 1:
         raise ValueError("Expected 0 < val_ratio, test_ratio and val_ratio + test_ratio < 1")
 
-    rng = __import__("random").Random(seed)
+    rng = random.Random(seed)
     buckets: dict[str, list[int]] = defaultdict(list)
     for index, record in enumerate(records):
         buckets[dominant_item_type(record.assistant_obj)].append(index)
@@ -778,3 +780,400 @@ def extract_json_object(text: str) -> tuple[dict[str, Any] | None, str | None]:
     if not isinstance(payload, dict):
         return None, "first JSON fragment is not an object"
     return payload, None
+
+
+def sample_validation_records(
+    records: list[ParsedRecord],
+    indices: list[int],
+    *,
+    limit: int,
+    seed: int,
+) -> list[ParsedRecord]:
+    if limit <= 0:
+        raise ValueError("limit must be > 0")
+    selected_indices = indices[:]
+    rng = random.Random(seed)
+    rng.shuffle(selected_indices)
+    return [records[index] for index in selected_indices[: min(limit, len(selected_indices))]]
+
+
+def count_questionnaire_items(payload: dict[str, Any] | None) -> int:
+    if not isinstance(payload, dict):
+        return 0
+    return len(iter_questionnaire_items(payload.get("item")))
+
+
+def item_type_set(payload: dict[str, Any] | None) -> set[str]:
+    if not isinstance(payload, dict):
+        return set()
+    return {
+        item_type
+        for item_type in (
+            item.get("type")
+            for item in iter_questionnaire_items(payload.get("item"))
+            if isinstance(item, dict)
+        )
+        if isinstance(item_type, str) and item_type.strip()
+    }
+
+
+def has_any_initial(value: Any) -> bool:
+    if isinstance(value, dict):
+        if "initial" in value:
+            return True
+        return any(has_any_initial(child) for child in value.values())
+    if isinstance(value, list):
+        return any(has_any_initial(child) for child in value)
+    return False
+
+
+def choice_items_have_answer_options(payload: dict[str, Any] | None) -> bool:
+    if not isinstance(payload, dict):
+        return False
+    for item in iter_questionnaire_items(payload.get("item")):
+        item_type = item.get("type")
+        if item_type in {"choice", "open-choice"}:
+            options = item.get("answerOption")
+            if not isinstance(options, list) or not options:
+                return False
+    return True
+
+
+def evaluate_generation_rules(
+    generated_obj: dict[str, Any] | None,
+    expected_obj: dict[str, Any],
+) -> dict[str, bool]:
+    expected_type_set = item_type_set(expected_obj)
+    generated_type_set = item_type_set(generated_obj)
+    expected_item_count = count_questionnaire_items(expected_obj)
+    generated_item_count = count_questionnaire_items(generated_obj)
+
+    rules: dict[str, bool] = {
+        "parseable_json": isinstance(generated_obj, dict),
+        "resourceType_questionnaire": False,
+        "id_present": False,
+        "status_present": False,
+        "title_present": False,
+        "root_items_non_empty": False,
+        "item_count_matches_gold": False,
+        "item_types_match_gold": False,
+        "choice_items_have_answer_options": False,
+        "no_initial_anywhere": False,
+    }
+
+    if not isinstance(generated_obj, dict):
+        return rules
+
+    root_items = generated_obj.get("item")
+    rules["resourceType_questionnaire"] = generated_obj.get("resourceType") == "Questionnaire"
+    rules["id_present"] = isinstance(generated_obj.get("id"), str) and bool(generated_obj.get("id", "").strip())
+    rules["status_present"] = isinstance(generated_obj.get("status"), str) and bool(generated_obj.get("status", "").strip())
+    rules["title_present"] = isinstance(generated_obj.get("title"), str) and bool(generated_obj.get("title", "").strip())
+    rules["root_items_non_empty"] = isinstance(root_items, list) and len(root_items) > 0
+    rules["item_count_matches_gold"] = generated_item_count == expected_item_count
+    rules["item_types_match_gold"] = generated_type_set == expected_type_set
+    rules["choice_items_have_answer_options"] = choice_items_have_answer_options(generated_obj)
+    rules["no_initial_anywhere"] = not has_any_initial(generated_obj)
+    return rules
+
+
+def aggregate_rule_results(rows: list[dict[str, Any]], mode: str) -> dict[str, Any]:
+    selected = [row for row in rows if row.get("mode") == mode]
+    if not selected:
+        return {
+            "mode": mode,
+            "n": 0,
+            "all_rules_pass": 0,
+            "success_rate": 0.0,
+            "rule_pass_rates": {},
+        }
+
+    rule_names = list(selected[0]["rules"].keys())
+    counts: Counter[str] = Counter()
+    all_rules_pass = 0
+    for row in selected:
+        if all(bool(row["rules"].get(rule, False)) for rule in rule_names):
+            all_rules_pass += 1
+        for rule in rule_names:
+            counts[rule] += int(bool(row["rules"].get(rule, False)))
+
+    total = len(selected)
+    return {
+        "mode": mode,
+        "n": total,
+        "all_rules_pass": all_rules_pass,
+        "success_rate": round(all_rules_pass * 100.0 / total, 2),
+        "rule_pass_rates": {
+            rule: round(counts[rule] * 100.0 / total, 2)
+            for rule in rule_names
+        },
+    }
+
+
+def build_analysis_payload(rule_eval_payload: dict[str, Any]) -> dict[str, Any]:
+    rows = rule_eval_payload.get("sample_level", [])
+    if not isinstance(rows, list):
+        raise ValueError("rule_eval_payload['sample_level'] must be a list")
+
+    strict_keys = [
+        "parseable_json",
+        "resourceType_questionnaire",
+        "id_present",
+        "status_present",
+        "title_present",
+        "root_items_non_empty",
+        "item_count_matches_gold",
+        "item_types_match_gold",
+        "choice_items_have_answer_options",
+        "no_initial_anywhere",
+    ]
+    relaxed_keys = [
+        "parseable_json",
+        "resourceType_questionnaire",
+        "status_present",
+        "title_present",
+        "root_items_non_empty",
+        "choice_items_have_answer_options",
+    ]
+
+    def summarize(mode: str, keys: list[str]) -> dict[str, Any]:
+        selected = [row for row in rows if row.get("mode") == mode]
+        total = len(selected)
+        if total == 0:
+            return {"mode": mode, "n": 0, "all_pass": 0, "rate": 0.0, "fail_counter": {}}
+        fail_counter: Counter[str] = Counter()
+        all_pass = 0
+        for row in selected:
+            rules = row.get("rules", {})
+            if not isinstance(rules, dict):
+                continue
+            failures = [key for key in keys if not bool(rules.get(key, False))]
+            if not failures:
+                all_pass += 1
+            for failure in failures:
+                fail_counter[failure] += 1
+        return {
+            "mode": mode,
+            "n": total,
+            "all_pass": all_pass,
+            "rate": round(all_pass * 100.0 / total, 2),
+            "fail_counter": dict(fail_counter.most_common()),
+        }
+
+    return {
+        "strict": {
+            "baseline": summarize("baseline", strict_keys),
+            "adapter": summarize("adapter", strict_keys),
+        },
+        "relaxed": {
+            "baseline": summarize("baseline", relaxed_keys),
+            "adapter": summarize("adapter", relaxed_keys),
+        },
+    }
+
+
+def build_go_no_go_payload(
+    rule_eval_payload: dict[str, Any],
+    analysis_payload: dict[str, Any],
+) -> dict[str, Any]:
+    baseline_rates = rule_eval_payload.get("baseline", {}).get("rule_pass_rates", {})
+    adapter_rates = rule_eval_payload.get("adapter", {}).get("rule_pass_rates", {})
+    strict_baseline = float(analysis_payload.get("strict", {}).get("baseline", {}).get("rate", 0.0))
+    strict_adapter = float(analysis_payload.get("strict", {}).get("adapter", {}).get("rate", 0.0))
+    relaxed_baseline = float(analysis_payload.get("relaxed", {}).get("baseline", {}).get("rate", 0.0))
+    relaxed_adapter = float(analysis_payload.get("relaxed", {}).get("adapter", {}).get("rate", 0.0))
+
+    core_rules = [
+        "parseable_json",
+        "resourceType_questionnaire",
+        "root_items_non_empty",
+    ]
+    core_regressions = []
+    for rule in core_rules:
+        baseline_value = float(baseline_rates.get(rule, 0.0))
+        adapter_value = float(adapter_rates.get(rule, 0.0))
+        if adapter_value < baseline_value:
+            core_regressions.append(
+                f"{rule}: adapter={adapter_value}% < baseline={baseline_value}%"
+            )
+
+    strict_delta = round(strict_adapter - strict_baseline, 2)
+    relaxed_delta = round(relaxed_adapter - relaxed_baseline, 2)
+    strict_ok = strict_adapter >= strict_baseline
+    relaxed_ok = relaxed_delta >= 5.0
+    core_ok = len(core_regressions) == 0
+
+    if strict_ok and relaxed_ok and core_ok:
+        decision = "GO"
+    elif core_ok and (strict_delta >= 0 or relaxed_delta >= 0):
+        decision = "CONDITIONAL_GO"
+    else:
+        decision = "NO_GO"
+
+    return {
+        "decision": decision,
+        "strict": {
+            "baseline_rate": strict_baseline,
+            "adapter_rate": strict_adapter,
+            "delta_pp": strict_delta,
+        },
+        "relaxed": {
+            "baseline_rate": relaxed_baseline,
+            "adapter_rate": relaxed_adapter,
+            "delta_pp": relaxed_delta,
+        },
+        "core_rule_regressions": core_regressions,
+        "criteria": {
+            "strict_non_regression": strict_ok,
+            "relaxed_delta_ge_5pp": relaxed_ok,
+            "no_core_rule_regression": core_ok,
+        },
+    }
+
+
+def write_json_artifact(path: Path, payload: dict[str, Any]) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return path
+
+
+def run_generation_command(command: list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        command,
+        cwd=str(cwd),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+
+def evaluate_record_pair(
+    workflow: WorkflowConfig,
+    record: ParsedRecord,
+    *,
+    sample_index: int,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for mode, use_adapter in (("baseline", False), ("adapter", True)):
+        command = build_generate_command(
+            workflow,
+            user_prompt=record.prompt,
+            use_adapter=use_adapter,
+        )
+        result = run_generation_command(command, cwd=workflow.repo_root)
+        generated_json, parse_error = extract_json_object(result.stdout)
+        rows.append(
+            {
+                "sample": sample_index,
+                "mode": mode,
+                "row_id": record.row_id,
+                "prompt": record.prompt,
+                "command": command,
+                "return_code": result.returncode,
+                "rules": evaluate_generation_rules(generated_json, record.assistant_obj),
+                "expected_id": record.assistant_obj.get("id"),
+                "generated_id": generated_json.get("id") if isinstance(generated_json, dict) else None,
+                "generated_json": generated_json,
+                "parse_error": parse_error,
+                "stderr_head": result.stderr.splitlines()[:5],
+            }
+        )
+    return rows
+
+
+def build_rule_eval_payload(
+    workflow: WorkflowConfig,
+    *,
+    sample_rows: list[dict[str, Any]],
+    materialized: MaterializedDataset,
+    n_samples: int,
+) -> dict[str, Any]:
+    baseline_summary = aggregate_rule_results(sample_rows, "baseline")
+    adapter_summary = aggregate_rule_results(sample_rows, "adapter")
+    delta_by_rule = {
+        rule: round(
+            float(adapter_summary["rule_pass_rates"].get(rule, 0.0))
+            - float(baseline_summary["rule_pass_rates"].get(rule, 0.0)),
+            2,
+        )
+        for rule in sorted(
+            set(baseline_summary["rule_pass_rates"].keys())
+            | set(adapter_summary["rule_pass_rates"].keys())
+        )
+    }
+    return {
+        "config": {
+            "n_samples": n_samples,
+            "seed": workflow.global_seed,
+            "model": workflow.model_name,
+            "model_alias": workflow.model_alias,
+            "adapter_dir": str(adapter_checkpoint_dir(workflow)),
+            "split_manifest_path": str(materialized.split_manifest_path),
+            "dataset_manifest_path": str(materialized.dataset_manifest_path),
+        },
+        "baseline": baseline_summary,
+        "adapter": adapter_summary,
+        "delta_adapter_minus_baseline": {
+            "all_rules_pass_rate": round(
+                float(adapter_summary["success_rate"]) - float(baseline_summary["success_rate"]),
+                2,
+            ),
+            "by_rule": delta_by_rule,
+        },
+        "sample_level": sample_rows,
+    }
+
+
+def summarize_evaluation_payloads(
+    rule_eval_payload: dict[str, Any] | None,
+    analysis_payload: dict[str, Any] | None,
+    decision_payload: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    rule_eval = rule_eval_payload or {}
+    analysis = analysis_payload or {}
+    decision = decision_payload or {}
+    baseline = rule_eval.get("baseline", {}) if isinstance(rule_eval.get("baseline"), dict) else {}
+    adapter = rule_eval.get("adapter", {}) if isinstance(rule_eval.get("adapter"), dict) else {}
+    strict = analysis.get("strict", {}) if isinstance(analysis.get("strict"), dict) else {}
+    relaxed = analysis.get("relaxed", {}) if isinstance(analysis.get("relaxed"), dict) else {}
+    return [
+        {"metric": "baseline_samples", "value": baseline.get("n")},
+        {"metric": "adapter_samples", "value": adapter.get("n")},
+        {"metric": "strict_baseline_rate", "value": (strict.get("baseline") or {}).get("rate")},
+        {"metric": "strict_adapter_rate", "value": (strict.get("adapter") or {}).get("rate")},
+        {"metric": "relaxed_baseline_rate", "value": (relaxed.get("baseline") or {}).get("rate")},
+        {"metric": "relaxed_adapter_rate", "value": (relaxed.get("adapter") or {}).get("rate")},
+        {"metric": "go_no_go_decision", "value": decision.get("decision")},
+    ]
+
+
+def run_ab_evaluation(
+    workflow: WorkflowConfig,
+    *,
+    validation_records: list[ParsedRecord],
+    materialized: MaterializedDataset,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    if not adapter_checkpoint_dir(workflow).exists():
+        raise FileNotFoundError(
+            f"Adapter checkpoints were not found at {adapter_checkpoint_dir(workflow)}"
+        )
+
+    sample_rows: list[dict[str, Any]] = []
+    for sample_index, record in enumerate(validation_records, start=1):
+        sample_rows.extend(
+            evaluate_record_pair(
+                workflow,
+                record,
+                sample_index=sample_index,
+            )
+        )
+
+    rule_eval_payload = build_rule_eval_payload(
+        workflow,
+        sample_rows=sample_rows,
+        materialized=materialized,
+        n_samples=len(validation_records),
+    )
+    analysis_payload = build_analysis_payload(rule_eval_payload)
+    decision_payload = build_go_no_go_payload(rule_eval_payload, analysis_payload)
+    return rule_eval_payload, analysis_payload, decision_payload

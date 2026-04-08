@@ -1,2 +1,3 @@
 model_name,model_alias,go_no_go_decision,adapter_relaxed_rate,baseline_relaxed_rate,relaxed_delta_pp,adapter_parseable_json_rate,train_duration_sec,emissions_kg_co2eq,updated_at_utc
-mlx-community/Qwen2.5-Coder-7B-Instruct-bf16,mlx-community-qwen2.5-coder-7b-instruct-bf16,,,,,,94.57,0.000222,2026-03-08T20:41:58.006995+00:00
+mlx-community/Qwen2.5-Coder-3B-Instruct-bf16,mlx-community-qwen2.5-coder-3b-instruct-bf16,NO_GO,10.00,33.33,-23.33,10.00,,,2026-04-08T13:40:35.972163+00:00
+mlx-community/Qwen2.5-Coder-7B-Instruct-bf16,mlx-community-qwen2.5-coder-7b-instruct-bf16,NO_GO,0.00,40.00,-40.00,0.00,,,2026-04-07T11:55:33.717215+00:00
