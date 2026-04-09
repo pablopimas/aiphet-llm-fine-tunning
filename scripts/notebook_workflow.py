@@ -40,7 +40,7 @@ SYSTEM_PROMPT = (
     "FHIR Questionnaire resource."
 )
 
-DEFAULT_CONFIG_REL_PATH = "configs/Qwen2.5-Coder-7B-Instruct-bf16.yaml"
+DEFAULT_CONFIG_REL_PATH = "configs/Qwen2.5-Coder-7B-Instruct-8bit.yaml"
 DEFAULT_DATASET_REL_PATH = "data/synthetic-aiprom-1500-firh4.jsonl"
 
 
@@ -661,7 +661,7 @@ def build_generate_command(
     workflow: WorkflowConfig,
     *,
     user_prompt: str,
-    max_tokens: int = 900,
+    max_tokens: int = 1600,
     seed: int | None = None,
     temperature: float = 0.0,
     top_p: float = 1.0,

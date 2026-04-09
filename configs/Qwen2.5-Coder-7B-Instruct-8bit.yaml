@@ -1,0 +1,41 @@
+# MLX-LM LoRA config for Qwen2.5-Coder-7B-Instruct-8bit (memory-aware)
+# Usage:
+#   python -m mlx_lm lora -c configs/Qwen2.5-Coder-7B-Instruct-8bit.yaml
+#
+# Notes:
+# - Uses the 8-bit MLX base to reduce memory pressure on Apple Silicon.
+# - Keeps sequence length above the original 512-token preset without jumping
+#   to the 2048-token setting that previously crashed Metal/MLX.
+
+model: mlx-community/Qwen2.5-Coder-7B-Instruct-8bit
+train: true
+fine_tune_type: lora
+
+# MLX-LM expects a directory containing train.jsonl + valid.jsonl.
+data: lab/artifacts
+
+# Keep adapter outputs isolated using the canonical slugified alias.
+adapter_path: lab/artifacts/mlx-community-qwen2.5-coder-7b-instruct-8bit/checkpoints_stable
+
+optimizer: adamw
+learning_rate: 5e-6
+iters: 1000
+batch_size: 1
+grad_accumulation_steps: 8
+max_seq_length: 1024
+
+# Balanced LoRA depth for the 7B 8-bit base.
+num_layers: 6
+
+grad_checkpoint: true
+weight_decay: 0.01
+
+steps_per_report: 200
+steps_per_eval: 400
+save_every: 200
+seed: 173
+
+lora_parameters:
+  rank: 8
+  scale: 16.0
+  dropout: 0.0

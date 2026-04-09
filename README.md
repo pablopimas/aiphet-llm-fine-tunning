@@ -15,7 +15,7 @@ The documented workflow is aligned with the checked-in assets in this repository
 
 - dataset: `data/synthetic-aiprom-1500-firh4.jsonl`
 - notebook: `lab/aiprom-fhir-finetune.ipynb`
-- supported configs: `configs/Qwen2.5-Coder-7B-Instruct-bf16.yaml` and `configs/Qwen2.5-Coder-3B-Instruct-bf16.yaml`
+- supported configs: `configs/Qwen2.5-Coder-7B-Instruct-8bit.yaml`, `configs/Qwen2.5-Coder-7B-Instruct-bf16.yaml`, and `configs/Qwen2.5-Coder-3B-Instruct-bf16.yaml`
 - reporting: `tunes/leaderboard.md` and `tunes/models/*.md`
 
 ## Artifact policy
@@ -24,16 +24,17 @@ The repository documents workflows that produce local experiment artifacts under
 
 - `lab/artifacts/` is treated as local runtime state, not as versioned source.
 - Published repository snapshots keep the notebook, configs, scripts, tune reports, and packaged assets under `tunes/`.
-- Documents such as `notebook-publication-checklist.md` describe an archived evaluated local snapshot and should be read together with the checked-in reports under `tunes/`.
+- Documents such as `notebook-publication-checklist.md` describe an archived executed snapshot and should be read together with the checked-in reports under `tunes/`.
 
 ## Current evaluated snapshots
 
 | Model | Alias | Status | Report | Updated at (UTC) |
 |---|---|---|---|---|
+| mlx-community/Qwen2.5-Coder-7B-Instruct-8bit | `mlx-community-qwen2.5-coder-7b-instruct-8bit` | `GO` | `tunes/models/mlx-community-qwen2.5-coder-7b-instruct-8bit.md` | 2026-04-09T20:00:42.654667+00:00 |
 | mlx-community/Qwen2.5-Coder-3B-Instruct-bf16 | `mlx-community-qwen2.5-coder-3b-instruct-bf16` | `NO_GO` | `tunes/models/mlx-community-qwen2.5-coder-3b-instruct-bf16.md` | 2026-04-08T13:40:35.972163+00:00 |
 | mlx-community/Qwen2.5-Coder-7B-Instruct-bf16 | `mlx-community-qwen2.5-coder-7b-instruct-bf16` | `NO_GO` | `tunes/models/mlx-community-qwen2.5-coder-7b-instruct-bf16.md` | 2026-04-07T11:55:33.717215+00:00 |
 
-These rows summarize the latest checked-in published reports. The archived notebook checklist is currently centered on the 3B run.
+These rows summarize the latest checked-in published reports. The current best checked-in snapshot is the 7B 8-bit run, and the publication checklist should be read as an executed snapshot record rather than as a clean-notebook requirement.
 
 ## Documents
 
@@ -78,7 +79,7 @@ poetry run jupyter lab lab/aiprom-fhir-finetune.ipynb
 If you prefer the CLI training entrypoint, pass the checked-in YAML directly:
 
 ```bash
-poetry run python -m mlx_lm lora -c configs/Qwen2.5-Coder-7B-Instruct-bf16.yaml
+poetry run python -m mlx_lm lora -c configs/Qwen2.5-Coder-7B-Instruct-8bit.yaml
 ```
 
 ## Rebuild published summaries
@@ -108,7 +109,7 @@ poetry run python scripts/update_tunes_reports.py --repo-root .
 To refresh a single model row/report:
 
 ```bash
-poetry run python scripts/update_tunes_reports.py --repo-root . --model-name "mlx-community/Qwen2.5-Coder-3B-Instruct-bf16"
+poetry run python scripts/update_tunes_reports.py --repo-root . --model-name "mlx-community/Qwen2.5-Coder-7B-Instruct-8bit"
 ```
 
 ## Current workflow target
@@ -141,6 +142,7 @@ If `AIPROM_MODEL_ALIAS` is not provided, it is derived from `AIPROM_MODEL_NAME`.
 
 Current supported configs:
 
+- `configs/Qwen2.5-Coder-7B-Instruct-8bit.yaml`
 - `configs/Qwen2.5-Coder-7B-Instruct-bf16.yaml`
 - `configs/Qwen2.5-Coder-3B-Instruct-bf16.yaml`
 
@@ -179,10 +181,10 @@ After training, you can run an inference test with MLX-LM using the adapter dire
 ```bash
 poetry run python -m mlx_lm generate \
 	--ignore-chat-template \
-	--model mlx-community/Qwen2.5-Coder-3B-Instruct-bf16 \
+	--model mlx-community/Qwen2.5-Coder-7B-Instruct-8bit \
 	--adapter-path lab/artifacts/<MODEL_ALIAS>/checkpoints_stable \
 	--prompt "<|im_start|>system\nYou are a FHIR R4 expert. Return only valid JSON for a complete FHIR Questionnaire resource.\n<|im_end|>\n<|im_start|>user\nGenerate a complete FHIR Questionnaire for PHQ-9 depression assessment\n<|im_end|>\n<|im_start|>assistant\n" \
-	--max-tokens 400 \
+	--max-tokens 900 \
 	--temp 0.0 \
 	--top-p 1.0 \
 	--verbose F \
@@ -190,6 +192,7 @@ poetry run python -m mlx_lm generate \
 ```
 
 Tip: keep prompts in ChatML format to match training conditions.
+For the current checked-in winner, use the 7B 8-bit config for training and evaluation. Keep export disabled on that path unless you intentionally switch to a non-quantized base for GGUF conversion.
 
 ### Use the specialized model in LM Studio (GGUF)
 
@@ -199,13 +202,13 @@ For this project (`Qwen2.5` family), the direct MLX flag `--export-gguf` may fai
 
 Also, fusing on top of certain quantized bases can produce conversion errors in `llama.cpp` (for example unsupported quantization metadata or tensor mapping issues).
 
-Use this validated workflow instead (fuse with the non-quantized base, then convert):
+Use this validated workflow instead when you need a GGUF deliverable (fuse with a non-quantized base, then convert):
 
 1) Fuse base model + trained LoRA adapter (MLX, non-4bit base):
 
 ```bash
 poetry run python -m mlx_lm fuse \
-	--model mlx-community/Qwen2.5-Coder-3B-Instruct-bf16 \
+	--model mlx-community/Qwen2.5-Coder-7B-Instruct-bf16 \
 	--adapter-path lab/artifacts/<MODEL_ALIAS>/checkpoints_stable \
 	--save-path lab/artifacts/<MODEL_ALIAS>/fused-noquant
 ```
@@ -240,6 +243,7 @@ Recommended import target for lightweight local inference:
 - Sample size is controlled from the notebook configuration cell via `AIPROM_EVAL_SAMPLES`.
 - The scoring path is structural and rule-based, focused on parseability and FHIR-oriented output validity.
 - Derived artifacts can include `ab_rule_eval.json`, `ab_rule_eval_analysis.json`, and `adapter_go_no_go.json` in local runtime storage.
+- The current strongest checked-in result is the 7B 8-bit snapshot with a `GO` decision in the published tune reports.
 - Checked-in reports preserve negative outcomes intentionally; `NO_GO` is treated as a valid reproducibility result, not filtered out.
 
 ## Key takeaways
@@ -264,11 +268,13 @@ Copyright (c) 2026 Pablo Pimàs.
 
 This repository currently ships configs for third-party base models in the Qwen2.5-Coder family:
 
+- `mlx-community/Qwen2.5-Coder-7B-Instruct-8bit`
 - `mlx-community/Qwen2.5-Coder-7B-Instruct-bf16`
 - `mlx-community/Qwen2.5-Coder-3B-Instruct-bf16`
 
 Representative Hugging Face repositories:
 
+- https://huggingface.co/mlx-community/Qwen2.5-Coder-7B-Instruct-8bit
 - https://huggingface.co/mlx-community/Qwen2.5-Coder-7B-Instruct-bf16
 - https://huggingface.co/mlx-community/Qwen2.5-Coder-3B-Instruct-bf16
 

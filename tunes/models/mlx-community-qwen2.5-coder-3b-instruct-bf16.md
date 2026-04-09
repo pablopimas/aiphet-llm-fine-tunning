@@ -18,7 +18,7 @@
 |---|---:|
 | Adapter inference return code | - |
 | Baseline inference return code | - |
-| Adapter parseable_json (%) | 10.00 |
+| Adapter parseable_json (%) | 10 |
 | Baseline parseable_json (%) | 33.33 |
 
 ## Evaluation
@@ -26,10 +26,10 @@
 | Metric | Value |
 |---|---:|
 | Samples | 30 |
-| Strict baseline rate (%) | 0.00 |
-| Strict adapter rate (%) | 0.00 |
-| Strict delta (pp) | 0.00 |
+| Strict baseline rate (%) | 0 |
+| Strict adapter rate (%) | 0 |
+| Strict delta (pp) | 0 |
 | Relaxed baseline rate (%) | 33.33 |
-| Relaxed adapter rate (%) | 10.00 |
+| Relaxed adapter rate (%) | 10 |
 | Relaxed delta (pp) | -23.33 |
 | GO/NO-GO | NO_GO |

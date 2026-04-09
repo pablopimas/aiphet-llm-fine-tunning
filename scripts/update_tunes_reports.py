@@ -64,6 +64,62 @@ def _fmt_num(value: float | int | None, digits: int = 2) -> str:
     return f"{value:.{digits}f}"
 
 
+def _fmt_decimal(value: float | int | None, digits: int = 2) -> str:
+    if value is None:
+        return "-"
+    return f"{float(value):.{digits}f}"
+
+
+def _has_summary_metrics(summary: ModelTuneSummary) -> bool:
+    metric_fields = (
+        "train_return_code",
+        "train_duration_sec",
+        "emissions_kg_co2eq",
+        "adapter_inference_return_code",
+        "baseline_inference_return_code",
+        "adapter_parseable_json_rate",
+        "baseline_parseable_json_rate",
+        "adapter_relaxed_rate",
+        "baseline_relaxed_rate",
+        "relaxed_delta_pp",
+        "strict_adapter_rate",
+        "strict_baseline_rate",
+        "strict_delta_pp",
+        "go_no_go_decision",
+        "n_eval_samples",
+    )
+    return any(getattr(summary, field) is not None for field in metric_fields)
+
+
+def _merge_with_existing(current: ModelTuneSummary, existing: ModelTuneSummary | None) -> ModelTuneSummary:
+    if existing is None:
+        return current
+
+    generated_at_utc = current.generated_at_utc if _has_summary_metrics(current) else existing.generated_at_utc
+
+    return ModelTuneSummary(
+        model_name=current.model_name or existing.model_name,
+        model_alias=current.model_alias or existing.model_alias,
+        artifact_root=current.artifact_root,
+        generated_at_utc=generated_at_utc,
+        train_return_code=current.train_return_code if current.train_return_code is not None else existing.train_return_code,
+        train_duration_sec=current.train_duration_sec if current.train_duration_sec is not None else existing.train_duration_sec,
+        emissions_kg_co2eq=current.emissions_kg_co2eq if current.emissions_kg_co2eq is not None else existing.emissions_kg_co2eq,
+        adapter_inference_return_code=current.adapter_inference_return_code if current.adapter_inference_return_code is not None else existing.adapter_inference_return_code,
+        baseline_inference_return_code=current.baseline_inference_return_code if current.baseline_inference_return_code is not None else existing.baseline_inference_return_code,
+        adapter_parseable_json_rate=current.adapter_parseable_json_rate if current.adapter_parseable_json_rate is not None else existing.adapter_parseable_json_rate,
+        baseline_parseable_json_rate=current.baseline_parseable_json_rate if current.baseline_parseable_json_rate is not None else existing.baseline_parseable_json_rate,
+        adapter_relaxed_rate=current.adapter_relaxed_rate if current.adapter_relaxed_rate is not None else existing.adapter_relaxed_rate,
+        baseline_relaxed_rate=current.baseline_relaxed_rate if current.baseline_relaxed_rate is not None else existing.baseline_relaxed_rate,
+        relaxed_delta_pp=current.relaxed_delta_pp if current.relaxed_delta_pp is not None else existing.relaxed_delta_pp,
+        strict_adapter_rate=current.strict_adapter_rate if current.strict_adapter_rate is not None else existing.strict_adapter_rate,
+        strict_baseline_rate=current.strict_baseline_rate if current.strict_baseline_rate is not None else existing.strict_baseline_rate,
+        strict_delta_pp=current.strict_delta_pp if current.strict_delta_pp is not None else existing.strict_delta_pp,
+        go_no_go_decision=current.go_no_go_decision if current.go_no_go_decision is not None else existing.go_no_go_decision,
+        n_eval_samples=current.n_eval_samples if current.n_eval_samples is not None else existing.n_eval_samples,
+    )
+
+
 def _extract_train_summary(training_payload: dict[str, Any]) -> tuple[int | None, float | None, float | None]:
     final_return_code = training_payload.get("final_return_code")
     attempts = training_payload.get("attempts")
@@ -398,12 +454,12 @@ def write_leaderboard(tunes_dir: Path, summaries: list[ModelTuneSummary]) -> tup
                 model=s.model_name,
                 alias=s.model_alias,
                 decision=s.go_no_go_decision or "-",
-                adp=_fmt_num(s.adapter_relaxed_rate),
-                base=_fmt_num(s.baseline_relaxed_rate),
-                delta=_fmt_num(s.relaxed_delta_pp),
-                parseable=_fmt_num(s.adapter_parseable_json_rate),
-                dur=_fmt_num(s.train_duration_sec),
-                em=_fmt_num(s.emissions_kg_co2eq, 6),
+                adp=_fmt_decimal(s.adapter_relaxed_rate),
+                base=_fmt_decimal(s.baseline_relaxed_rate),
+                delta=_fmt_decimal(s.relaxed_delta_pp),
+                parseable=_fmt_decimal(s.adapter_parseable_json_rate),
+                dur=_fmt_decimal(s.train_duration_sec),
+                em=_fmt_decimal(s.emissions_kg_co2eq, 6),
                 ts=s.generated_at_utc,
             )
         )
@@ -464,6 +520,8 @@ def main() -> int:
         summary = collect_model_summary(repo_root, model_dir)
         if summary is None:
             continue
+        existing_summary = load_existing_model_report(tunes_dir, summary.model_alias)
+        summary = _merge_with_existing(summary, existing_summary)
         summaries_by_alias[summary.model_alias] = summary
         report_paths.append(write_model_report(tunes_dir, summary))
 
